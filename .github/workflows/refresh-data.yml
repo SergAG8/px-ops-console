@@ -27,6 +27,7 @@ jobs:
           CARD_ISM_SUBSCRIPTIONS: ${{ secrets.CARD_ISM_SUBSCRIPTIONS }}
           CARD_ISM_TASKS: ${{ secrets.CARD_ISM_TASKS }}
           CARD_ISM_TOUCHES: ${{ secrets.CARD_ISM_TOUCHES }}
+          CARD_ISM_REVENUE: ${{ secrets.CARD_ISM_REVENUE }}
 
       - name: Commit updated data
         run: |
