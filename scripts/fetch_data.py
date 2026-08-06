@@ -14,21 +14,11 @@ os.makedirs("public/data", exist_ok=True)
 
 for name, card_id in CARDS.items():
     print(f"Fetching {name} (card {card_id})...")
-    # limit=1000000 (via query params in the body) tells Metabase not to truncate at its default 2000-row cap
-    resp = requests.post(
-        f"{BASE}/api/card/{card_id}/query",
-        headers=HEADERS,
-        json={"constraints": {"max-results": 1000000, "max-results-bare-rows": 1000000}},
-        timeout=180,
-    )
+    # /query/json is the "export" endpoint (same one the download button uses)
+    # it does NOT apply the 2000-row UI preview cap that /query does.
+    resp = requests.post(f"{BASE}/api/card/{card_id}/query/json", headers=HEADERS, timeout=180)
     resp.raise_for_status()
-    payload = resp.json()
-
-    data = payload.get("data", payload)
-    rows = data.get("rows", [])
-    cols = [c["name"] for c in data.get("cols", [])]
-
-    out = [dict(zip(cols, row)) for row in rows]
+    out = resp.json()  # this endpoint already returns a plain list of row objects
 
     with open(f"public/data/{name}.json", "w") as f:
         json.dump(out, f, default=str)
