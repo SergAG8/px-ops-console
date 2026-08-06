@@ -7,6 +7,7 @@ CARDS = {
     "ism_subscriptions": os.environ["CARD_ISM_SUBSCRIPTIONS"],
     "ism_tasks": os.environ["CARD_ISM_TASKS"],
     "ism_touches": os.environ["CARD_ISM_TOUCHES"],
+    "ism_revenue": os.environ["CARD_ISM_REVENUE"],
 }
 
 os.makedirs("public/data", exist_ok=True)
@@ -17,7 +18,6 @@ for name, card_id in CARDS.items():
     resp.raise_for_status()
     payload = resp.json()
 
-    # Metabase wraps results under data.rows / data.cols
     data = payload.get("data", payload)
     rows = data.get("rows", [])
     cols = [c["name"] for c in data.get("cols", [])]
