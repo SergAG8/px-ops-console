@@ -17,7 +17,8 @@ async function fetchJsonOptional(name) {
   try { return await fetchJson(name); } catch { return null; }
 }
 
-const REGIONS = ['LatAm PMC', 'Spain', 'Brazil', 'Italy', 'Poland', 'Turkey', 'Indonesia', 'UK', 'USA', 'CIS']; // GCC excluded — no ISM data yet, will apply to Subscriptions tab later
+const REGIONS = ['LatAm PMC', 'Spain', 'Brazil', 'Italy', 'Poland', 'Turkey', 'Indonesia', 'UK', 'USA', 'CIS']; // GCC excluded — no ISM data yet
+const REGIONS_SUBS = [...REGIONS, 'GCC']; // GCC will show up once Subscriptions is wired to live data
 
 const STAGES = [
   'Not yet touched', 'ISM start working', 'Negotiations ISM', 'Waiting for decision', 'Payment control ISM',
@@ -71,7 +72,7 @@ function Badge({ t, children }) { return <span className={`text-xs px-1.5 py-0.5
 function Metric({ t, label, value, sub, accent, icon: Icon, preview }) {
   return (
     <div className={`${t.panel} border ${t.panelBorder} rounded-xl px-4 py-3 flex-1 min-w-40`}>
-      <p className={`text-xs uppercase tracking-wide ${t.muted} mb-1 flex items-center`}>{Icon && <Icon size={11} className="mr-1" />}{label}{preview && <Badge t={t}>preview</Badge>}</p>
+      <p className={`text-xs uppercase tracking-wide ${t.muted} mb-1 flex items-center`}>{Icon && <Icon size={11} className="mr-1" />}{label}</p>
       <p className={`font-mono text-2xl ${t.strong} ${accent || ''}`}>{value}</p>
       {sub && <p className={`text-xs ${t.muted} mt-1`}>{sub}</p>}
     </div>
@@ -130,9 +131,16 @@ function computeRegion(raw, region, from, to) {
     }
   });
 
-  // "Touched" = has ANY task ever (real current state), restricted to leads
-  // actually in this month's base. This is a STATE, not tied to the date range.
+  // "Ever touched" = has ANY task at all, any time (real CURRENT STATE) — drives
+  // status breakdown / pipeline below, which shouldn't change just because you
+  // narrowed the date filter.
   const everTouchedIds = new Set(tasks.map((r) => r.student_id).filter((sid) => studentSet.has(sid)));
+
+  // "Touched this period" = has a task specifically inside the selected date
+  // range (FLOW) — drives Utilization and the Managers table's Touched/Pending,
+  // so picking "today" actually shows a small number, not everyone at 100%.
+  const touchedPeriodIds = new Set(tasksInRange.map((r) => r.student_id).filter((sid) => studentSet.has(sid)));
+
   const touchesInRange = (raw.touches || []).filter((r) => r.region === region && r.day >= from && r.day <= to);
 
   // Region-level status breakdown — always the lead's REAL current status
@@ -145,7 +153,7 @@ function computeRegion(raw, region, from, to) {
     if (everTouchedIds.has(sid)) stageCounts[bucketStatus(row.status)]++;
     else stageCounts['Not yet touched']++;
   });
-  const touchedCount = everTouchedIds.size;
+  const touchedCount = touchedPeriodIds.size;
   const touchedPct = totalLeads ? Math.round((touchedCount / totalLeads) * 100) : 0;
 
   const aov = AOV_GUESS[region] || 250;
@@ -170,8 +178,9 @@ function computeRegion(raw, region, from, to) {
 
   const managers = Array.from(mgrLeadIds.entries()).map(([name, myLeadIds]) => {
     const assigned = myLeadIds.length;
-    const touched = myLeadIds.filter((sid) => everTouchedIds.has(sid)).length;
+    const touched = myLeadIds.filter((sid) => touchedPeriodIds.has(sid)).length;
     const pending = assigned - touched;
+    const touchedEverCount = myLeadIds.filter((sid) => everTouchedIds.has(sid)).length;
 
     const overdue = tasks.filter((r) => normMgrName(r.manager) === name && r.is_completed === false && r.deadline && r.deadline < to).length;
 
@@ -181,7 +190,10 @@ function computeRegion(raw, region, from, to) {
     const talkMin = Math.round(myTouches.reduce((s, r) => s + (r.talk_seconds || 0), 0) / 60 * 10) / 10;
     const messages = myTouches.reduce((s, r) => s + (r.messages || 0), 0);
 
-    const stages = { 'Not yet touched': pending };
+    // Status detail (expandable row) reflects REAL CURRENT state — a lead
+    // worked in July still shows its real status today, even if untouched
+    // this exact period. "Not yet touched" here = never touched at all.
+    const stages = { 'Not yet touched': assigned - touchedEverCount };
     STAGES.slice(1).forEach((s) => { stages[s] = 0; });
     myLeadIds.forEach((sid) => {
       if (everTouchedIds.has(sid)) {
@@ -212,7 +224,7 @@ function StreamTouchPanel({ t, region, computed }) {
   const BLOCK_LABEL = { upsells: 'Upsells', pim: 'Prolongation in Month', prevMonth: 'Prev Month (July cohort)' };
   return (
     <div className={`${t.panel} border ${t.panelBorder} rounded-xl p-4`}>
-      <p className={`text-xs uppercase tracking-wide ${t.muted} mb-3 flex items-center`}>Leads by stream<Badge t={t}>real counts</Badge></p>
+      <p className={`text-xs uppercase tracking-wide ${t.muted} mb-3 flex items-center`}>Leads by stream</p>
       <div className="grid md:grid-cols-3 gap-4">
         {['upsells', 'pim', 'prevMonth'].map((b) => (
           <div key={b}>
@@ -330,6 +342,7 @@ function CalendarView({ t, tasksAll }) {
 
 export default function PXOpsConsole() {
   const [theme, setTheme] = useState('dark');
+  const [view, setView] = useState('ism');
   const [regionIdx, setRegionIdx] = useState(0);
   const [ismTab, setIsmTab] = useState('managers');
   const [globalRange, setGlobalRange] = useState({ from: '2026-08-01', to: '2026-08-31' });
@@ -392,31 +405,52 @@ export default function PXOpsConsole() {
             <h1 className={`text-base font-medium ${t.strong}`}>PX Ops Console</h1>
             <span className={`text-xs font-mono ${t.muted}`}>ISM · live from Metabase</span>
           </div>
-          <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className={`${t.panel} border ${t.panelBorder} rounded-full p-2`} title="Toggle light/dark mode">
-            {theme === 'dark' ? <Sun size={15} className="text-amber-400" /> : <Moon size={15} className="text-slate-600" />}
-          </button>
-        </div>
-        <div className={`flex flex-wrap items-center gap-2 mt-4 pt-3 border-t ${t.headerBorder}`}>
-          <CalIcon size={13} className={t.muted} />
-          <span className={`text-xs ${t.muted} uppercase tracking-wide mr-1`}>Showing data for</span>
-          <input type="date" value={globalRange.from} onChange={(e) => setGlobalRange((r) => ({ ...r, from: e.target.value }))} className={`${t.input} border rounded-lg text-sm px-2 py-1`} />
-          <span className={t.muted}>→</span>
-          <input type="date" value={globalRange.to} onChange={(e) => setGlobalRange((r) => ({ ...r, to: e.target.value }))} className={`${t.input} border rounded-lg text-sm px-2 py-1`} />
-          {!raw.revenue && <Badge t={t}>revenue pending — create Metabase Question 5</Badge>}
-        </div>
-        <div className="flex gap-1.5 mt-4 overflow-x-auto pb-1">
-          {REGIONS.map((r, i) => (
-            <button key={r} onClick={() => setRegionIdx(i)} className={`text-sm px-3 py-1.5 rounded-lg whitespace-nowrap border flex items-center gap-1.5 ${i === regionIdx ? t.pillActive : t.pillInactive}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${i === regionIdx ? 'bg-teal-400 animate-pulse' : t.dot}`} />{r}
+          <div className="flex items-center gap-3">
+            <div className={`flex ${t.panel} border ${t.panelBorder} rounded-full p-1 gap-1`}>
+              {[{ key: 'ism', label: 'ISM', icon: Users }, { key: 'subs', label: 'Subscriptions', icon: DollarSign }, { key: 'total', label: 'Total', icon: Layers }].map((v) => (
+                <button key={v.key} onClick={() => setView(v.key)} className={`flex items-center gap-1 text-sm px-3 py-1.5 rounded-full ${view === v.key ? t.headerChip + ' border' : t.muted + ' hover:opacity-80'}`}>
+                  <v.icon size={13} /> {v.label}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className={`${t.panel} border ${t.panelBorder} rounded-full p-2`} title="Toggle light/dark mode">
+              {theme === 'dark' ? <Sun size={15} className="text-amber-400" /> : <Moon size={15} className="text-slate-600" />}
             </button>
-          ))}
-          <span className={`w-px ${t.track} mx-1`} />
-          <button onClick={() => setRegionIdx(REGIONS.length)} className={`text-sm px-3 py-1.5 rounded-lg whitespace-nowrap border flex items-center gap-1.5 font-medium ${isAll ? t.totalActive : t.totalInactive}`}>
-            <Layers size={12} /> ALL REGIONS
-          </button>
+          </div>
         </div>
+        {view === 'ism' && (
+          <>
+            <div className={`flex flex-wrap items-center gap-2 mt-4 pt-3 border-t ${t.headerBorder}`}>
+              <CalIcon size={13} className={t.muted} />
+              <span className={`text-xs ${t.muted} uppercase tracking-wide mr-1`}>Showing data for</span>
+              <input type="date" value={globalRange.from} onChange={(e) => setGlobalRange((r) => ({ ...r, from: e.target.value }))} className={`${t.input} border rounded-lg text-sm px-2 py-1`} />
+              <span className={t.muted}>→</span>
+              <input type="date" value={globalRange.to} onChange={(e) => setGlobalRange((r) => ({ ...r, to: e.target.value }))} className={`${t.input} border rounded-lg text-sm px-2 py-1`} />
+              {!raw.revenue && <span className={`text-xs ${t.muted}`}>(revenue data not loaded)</span>}
+            </div>
+            <div className="flex gap-1.5 mt-4 overflow-x-auto pb-1">
+              {REGIONS.map((r, i) => (
+                <button key={r} onClick={() => setRegionIdx(i)} className={`text-sm px-3 py-1.5 rounded-lg whitespace-nowrap border flex items-center gap-1.5 ${i === regionIdx ? t.pillActive : t.pillInactive}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${i === regionIdx ? 'bg-teal-400 animate-pulse' : t.dot}`} />{r}
+                </button>
+              ))}
+              <span className={`w-px ${t.track} mx-1`} />
+              <button onClick={() => setRegionIdx(REGIONS.length)} className={`text-sm px-3 py-1.5 rounded-lg whitespace-nowrap border flex items-center gap-1.5 font-medium ${isAll ? t.totalActive : t.totalInactive}`}>
+                <Layers size={12} /> ALL REGIONS
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
+      {view !== 'ism' && (
+        <div className="px-6 py-16 max-w-6xl mx-auto text-center">
+          <Layers size={28} className={`${t.muted} mx-auto mb-3`} />
+          <p className={`text-sm ${t.mutedStrong}`}>{view === 'subs' ? 'Subscriptions' : 'Total'} is next — ISM is being finalized first, this view isn't wired to live data yet.</p>
+        </div>
+      )}
+
+      {view === 'ism' && (
       <div className="px-6 py-5 max-w-6xl mx-auto">
         {!isAll && (
           <>
@@ -424,12 +458,12 @@ export default function PXOpsConsole() {
               <Metric t={t} label="ISM base" value={data.totalLeads.toLocaleString()} sub={`Upsells ${data.blocks.upsells} · PIM ${data.blocks.pim} · Prev month ${data.blocks.prevMonth} — real`} />
               <Metric t={t} label="Utilization" value={`${data.touchedPct}%`} sub={`${data.touchedCount} touched, ${globalRange.from} → ${globalRange.to}`} accent="text-teal-500" />
               <Metric t={t} label="Not yet touched" value={data.stageCounts['Not yet touched']} accent="text-amber-500" />
-              <Metric t={t} label="Revenue (ISM)" value={data.revenueAug !== null ? `$${Math.round(data.revenueAug).toLocaleString()}` : 'pending'} sub="real payments, this range" icon={DollarSign} accent={data.revenueAug !== null ? 'text-teal-500' : t.muted} preview={data.revenueAug === null} />
+              <Metric t={t} label="Revenue (ISM)" value={data.revenueAug !== null ? `$${Math.round(data.revenueAug).toLocaleString()}` : 'n/a'} sub="real payments, this range" icon={DollarSign} accent={data.revenueAug !== null ? 'text-teal-500' : t.muted} />
               <Metric t={t} label="Pipeline (Negot.+Waiting)" value={`$${data.pipelineRevenue.toLocaleString()}`} sub={`${data.pipelineLeads} leads`} icon={TrendingUp} accent="text-violet-500" />
             </div>
 
             <div className={`${t.panel} border ${t.panelBorder} rounded-xl p-4 mb-4`}>
-              <p className={`text-xs uppercase tracking-wide ${t.muted} mb-3 flex items-center`}>Status breakdown — {REGIONS[regionIdx]}<Badge t={t}>real, live</Badge></p>
+              <p className={`text-xs uppercase tracking-wide ${t.muted} mb-3 flex items-center`}>Status breakdown — {REGIONS[regionIdx]}, as of {globalRange.to}</p>
               <StageBar t={t} breakdown={data.stageCounts} total={data.totalLeads} />
             </div>
 
@@ -441,7 +475,7 @@ export default function PXOpsConsole() {
                   <tb.icon size={13} /> {tb.l}
                 </button>
               ))}
-              <Badge t={t}>{data.managers.length} managers, live from data — no manual list</Badge>
+              <span className={`text-xs ${t.muted}`}>{data.managers.length} managers</span>
             </div>
 
             {ismTab === 'managers' ? (
@@ -466,7 +500,7 @@ export default function PXOpsConsole() {
             <div className="flex gap-3 flex-wrap mb-4">
               <Metric t={t} label="Total leads — all regions" value={agg.totalLeads.toLocaleString()} sub={`Upsells ${agg.upsells} · PIM ${agg.pim} · Prev month ${agg.prevMonth}`} />
               <Metric t={t} label="Touched — all regions" value={agg.touchedCount.toLocaleString()} accent="text-teal-500" />
-              <Metric t={t} label="Revenue — all regions" value={agg.revenueAug !== null ? `$${Math.round(agg.revenueAug).toLocaleString()}` : 'pending'} accent="text-teal-500" preview={agg.revenueAug === null} />
+              <Metric t={t} label="Revenue — all regions" value={agg.revenueAug !== null ? `$${Math.round(agg.revenueAug).toLocaleString()}` : 'n/a'} accent="text-teal-500" />
               <Metric t={t} label="Pipeline — all regions" value={`$${agg.pipelineRevenue.toLocaleString()}`} accent="text-violet-500" />
             </div>
             <div className={`${t.panel} border ${t.panelBorder} rounded-xl overflow-x-auto`}>
@@ -488,6 +522,7 @@ export default function PXOpsConsole() {
           </>
         )}
       </div>
+      )}
     </div>
   );
 }
