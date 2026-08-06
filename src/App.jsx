@@ -125,8 +125,7 @@ function computeRegion(raw, region, from, to) {
   const touchedThisRange = new Set(tasksInRange.map((r) => r.student_id));
   const assignedSet = new Set(tasks.map((r) => r.student_id));
 
-  const touches = raw.touches.filter((r) => studentSet.has(r.student_id));
-  const touchesInRange = touches.filter((r) => inRange(r.touched_at));
+  const touchesInRange = (raw.touches || []).filter((r) => r.region === region && r.day >= from && r.day <= to);
 
   // region-level status breakdown (real, restricted to actual base leads)
   const stageCounts = {};
@@ -169,10 +168,10 @@ function computeRegion(raw, region, from, to) {
     const overdue = tasks.filter((r) => normMgrName(r.manager) === name && r.is_completed === false && r.deadline && r.deadline < to).length;
 
     const myTouches = touchesInRange.filter((r) => normMgrName(r.manager) === name);
-    const calls = myTouches.filter((r) => r.touch_type === 'call');
-    const messages = myTouches.filter((r) => r.touch_type === 'message' && r.manager !== 'Bloomreach');
-    const successfulCalls = calls.filter((r) => r.is_call_successfully).length;
-    const talkMin = Math.round(calls.reduce((s, r) => s + (r.talk_seconds || 0), 0) / 60 * 10) / 10;
+    const calls = myTouches.reduce((s, r) => s + (r.calls || 0), 0);
+    const successfulCalls = myTouches.reduce((s, r) => s + (r.successful_calls || 0), 0);
+    const talkMin = Math.round(myTouches.reduce((s, r) => s + (r.talk_seconds || 0), 0) / 60 * 10) / 10;
+    const messages = myTouches.reduce((s, r) => s + (r.messages || 0), 0);
 
     const stages = { 'Not yet touched': assigned - touched };
     STAGES.slice(1).forEach((s) => { stages[s] = 0; });
@@ -186,8 +185,8 @@ function computeRegion(raw, region, from, to) {
 
     return {
       name, assigned, touched, pending, overdue,
-      calls: calls.length, successfulCalls, talkMin, messages: messages.length,
-      touchesPerLead: touched ? Math.round(((calls.length + messages.length) / touched) * 100) / 100 : 0,
+      calls, successfulCalls, talkMin, messages,
+      touchesPerLead: touched ? Math.round(((calls + messages) / touched) * 100) / 100 : 0,
       stages, pipelineLeads: mgrPipelineLeads, pipelineRevenue: Math.round(mgrPipelineLeads * aov),
       revenue: revenueByManager[name] ?? null,
       hasSales: (revenueByManager[name] ?? 0) > 0,
