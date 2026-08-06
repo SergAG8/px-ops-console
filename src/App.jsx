@@ -32,19 +32,38 @@ const STAGE_COLOR = {
 };
 function bucketStatus(raw) {
   const s = String(raw || '').toLowerCase();
-  if (/ism start|начина/.test(s)) return 'ISM start working';
+  if (/ism start working|мвп начина/.test(s)) return 'ISM start working';
   if (/negotiat|переговор/.test(s)) return 'Negotiations ISM';
-  if (/waiting for decision/.test(s)) return 'Waiting for decision';
+  if (/waiting for decision|delayed decision|отложенный спрос/.test(s)) return 'Waiting for decision';
   if (/payment control|контроль оплаты/.test(s)) return 'Payment control ISM';
-  if (/not getting through|didn.t get through|не дозвонились/.test(s)) return 'Not getting through ISM';
-  if (/wallet is waiting|waiting to receive funds|ожидаем пополнения|оплачено, ждет/.test(s)) return 'Wallet is waiting to receive funds';
-  if (/reserv|резерв/.test(s)) return 'Reserve base (prolongation)';
+  if (/not getting through|не дозвонились|not reachable/.test(s)) return 'Not getting through ISM';
+  if (/wallet is waiting|waiting to receive funds|ожидаем пополнения|ожидает зачисления/.test(s)) return 'Wallet is waiting to receive funds';
+  if (/reserve|резерв/.test(s)) return 'Reserve base (prolongation)';
+  if (/^na|^n\/a|na 5\+|отказ/.test(s)) return 'Other (unconfirmed)';
   return 'Other (unconfirmed)';
 }
 function normMgrName(n) {
   return String(n || '').replace(/\s*\(amoCRM\)\s*/g, '').trim();
 }
 const AOV_GUESS = { 'LatAm PMC': 274, Brazil: 251, Turkey: 365, Indonesia: 136, UK: 385, CIS: 521, Poland: 200, Italy: 200, USA: 200, Spain: 250, GCC: 250 };
+
+const SUBS_DATA = {"LatAm PMC": {"0": {"total": 1, "paid": 1, "overdue": 0, "scheduled": 0, "revenue_collected": 182.56, "cr": null, "aov": null, "projected_pending_revenue": null}, "1": {"total": 842, "paid": 37, "overdue": 57, "scheduled": 748, "revenue_collected": 6502.29, "cr": null, "aov": null, "projected_pending_revenue": null}, "2": {"total": 788, "paid": 24, "overdue": 47, "scheduled": 717, "revenue_collected": 3059.49, "cr": null, "aov": null, "projected_pending_revenue": null}, "3": {"total": 555, "paid": 24, "overdue": 35, "scheduled": 496, "revenue_collected": 3038.89, "cr": null, "aov": null, "projected_pending_revenue": null}, "4": {"total": 275, "paid": 11, "overdue": 24, "scheduled": 240, "revenue_collected": 1878.54, "cr": null, "aov": null, "projected_pending_revenue": null}, "5": {"total": 273, "paid": 12, "overdue": 21, "scheduled": 240, "revenue_collected": 986.82, "cr": null, "aov": null, "projected_pending_revenue": null}, "6": {"total": 281, "paid": 11, "overdue": 22, "scheduled": 248, "revenue_collected": 963.63, "cr": null, "aov": null, "projected_pending_revenue": null}, "7": {"total": 238, "paid": 5, "overdue": 23, "scheduled": 210, "revenue_collected": 524.48, "cr": null, "aov": null, "projected_pending_revenue": null}, "8": {"total": 120, "paid": 4, "overdue": 13, "scheduled": 103, "revenue_collected": 185.26, "cr": null, "aov": null, "projected_pending_revenue": null}, "9": {"total": 145, "paid": 4, "overdue": 20, "scheduled": 121, "revenue_collected": 349.22, "cr": null, "aov": null, "projected_pending_revenue": null}}, "Brazil": {"1": {"total": 42, "paid": 0, "overdue": 4, "scheduled": 38, "revenue_collected": null, "cr": 0.326, "aov": 98, "projected_pending_revenue": 1342}, "2": {"total": 22, "paid": 0, "overdue": 2, "scheduled": 20, "revenue_collected": null, "cr": 0.279, "aov": 80, "projected_pending_revenue": 491}, "3": {"total": 50, "paid": 0, "overdue": 4, "scheduled": 46, "revenue_collected": null, "cr": 0.256, "aov": 106, "projected_pending_revenue": 1357}, "4": {"total": 32, "paid": 0, "overdue": 6, "scheduled": 26, "revenue_collected": null, "cr": 0.118, "aov": 128, "projected_pending_revenue": 483}, "5": {"total": 51, "paid": 0, "overdue": 3, "scheduled": 48, "revenue_collected": null, "cr": 0.143, "aov": 47, "projected_pending_revenue": 343}, "6": {"total": 15, "paid": 0, "overdue": 0, "scheduled": 15, "revenue_collected": null, "cr": 0, "aov": 0, "projected_pending_revenue": 0}, "7": {"total": 5, "paid": 0, "overdue": 0, "scheduled": 5, "revenue_collected": null, "cr": 0.15, "aov": 152, "projected_pending_revenue": 114}, "9": {"total": 3, "paid": 0, "overdue": 0, "scheduled": 3, "revenue_collected": null, "cr": 0, "aov": 0, "projected_pending_revenue": 0}}, "Turkey": {"1": {"total": 72, "paid": 0, "overdue": 9, "scheduled": 63, "revenue_collected": null, "cr": 0.533, "aov": 223, "projected_pending_revenue": 8558}, "2": {"total": 45, "paid": 0, "overdue": 3, "scheduled": 42, "revenue_collected": null, "cr": 0.524, "aov": 114, "projected_pending_revenue": 2688}, "3": {"total": 55, "paid": 0, "overdue": 10, "scheduled": 45, "revenue_collected": null, "cr": 0.211, "aov": 97, "projected_pending_revenue": 1126}, "4": {"total": 21, "paid": 0, "overdue": 1, "scheduled": 20, "revenue_collected": null, "cr": 0.306, "aov": 97, "projected_pending_revenue": 623}, "5": {"total": 33, "paid": 0, "overdue": 2, "scheduled": 31, "revenue_collected": null, "cr": 0.171, "aov": 104, "projected_pending_revenue": 587}, "6": {"total": 23, "paid": 0, "overdue": 1, "scheduled": 22, "revenue_collected": null, "cr": 0.034, "aov": 55, "projected_pending_revenue": 43}, "7": {"total": 15, "paid": 0, "overdue": 2, "scheduled": 13, "revenue_collected": null, "cr": 0.15, "aov": 152, "projected_pending_revenue": 342}}, "Indonesia": {"1": {"total": 56, "paid": 0, "overdue": 4, "scheduled": 52, "revenue_collected": null, "cr": 0.563, "aov": 82, "projected_pending_revenue": 2585}, "2": {"total": 58, "paid": 0, "overdue": 4, "scheduled": 54, "revenue_collected": null, "cr": 0.643, "aov": 84, "projected_pending_revenue": 3133}, "3": {"total": 1, "paid": 0, "overdue": 0, "scheduled": 1, "revenue_collected": null, "cr": null, "aov": null, "projected_pending_revenue": null}}, "UK": {"1": {"total": 83, "paid": 0, "overdue": 7, "scheduled": 76, "revenue_collected": null, "cr": 0.614, "aov": 263, "projected_pending_revenue": 13403}, "2": {"total": 56, "paid": 0, "overdue": 2, "scheduled": 54, "revenue_collected": null, "cr": 0.656, "aov": 299, "projected_pending_revenue": 10984}, "3": {"total": 46, "paid": 0, "overdue": 1, "scheduled": 45, "revenue_collected": null, "cr": 0.559, "aov": 223, "projected_pending_revenue": 5734}, "4": {"total": 8, "paid": 0, "overdue": 0, "scheduled": 8, "revenue_collected": null, "cr": 0.5, "aov": 238, "projected_pending_revenue": 952}, "5": {"total": 11, "paid": 0, "overdue": 1, "scheduled": 10, "revenue_collected": null, "cr": 0.05, "aov": 124, "projected_pending_revenue": 68}, "6": {"total": 3, "paid": 0, "overdue": 1, "scheduled": 2, "revenue_collected": null, "cr": 0.429, "aov": 114, "projected_pending_revenue": 147}, "7": {"total": 20, "paid": 0, "overdue": 2, "scheduled": 18, "revenue_collected": null, "cr": 0.214, "aov": 175, "projected_pending_revenue": 749}, "8": {"total": 8, "paid": 0, "overdue": 2, "scheduled": 6, "revenue_collected": null, "cr": 0.294, "aov": 125, "projected_pending_revenue": 294}, "9": {"total": 17, "paid": 0, "overdue": 2, "scheduled": 15, "revenue_collected": null, "cr": 0, "aov": 0, "projected_pending_revenue": 0}}, "CIS": {"1": {"total": 143, "paid": 0, "overdue": 19, "scheduled": 124, "revenue_collected": null, "cr": 0.42, "aov": 135, "projected_pending_revenue": 8108}, "2": {"total": 91, "paid": 0, "overdue": 9, "scheduled": 82, "revenue_collected": null, "cr": 0.469, "aov": 147, "projected_pending_revenue": 6274}, "3": {"total": 91, "paid": 0, "overdue": 15, "scheduled": 76, "revenue_collected": null, "cr": 0.378, "aov": 152, "projected_pending_revenue": 5228}, "4": {"total": 103, "paid": 0, "overdue": 11, "scheduled": 92, "revenue_collected": null, "cr": 0.283, "aov": 150, "projected_pending_revenue": 4372}, "5": {"total": 10, "paid": 0, "overdue": 1, "scheduled": 9, "revenue_collected": null, "cr": 0.292, "aov": 147, "projected_pending_revenue": 429}, "6": {"total": 5, "paid": 0, "overdue": 1, "scheduled": 4, "revenue_collected": null, "cr": 0.227, "aov": 161, "projected_pending_revenue": 183}, "7": {"total": 16, "paid": 0, "overdue": 2, "scheduled": 14, "revenue_collected": null, "cr": 0.5, "aov": 140, "projected_pending_revenue": 1120}, "9": {"total": 1, "paid": 0, "overdue": 0, "scheduled": 1, "revenue_collected": null, "cr": 0, "aov": 0, "projected_pending_revenue": 0}}, "USA": {"1": {"total": 82, "paid": 0, "overdue": 4, "scheduled": 78, "revenue_collected": null, "cr": 0.667, "aov": 158, "projected_pending_revenue": 8642}, "2": {"total": 62, "paid": 0, "overdue": 4, "scheduled": 58, "revenue_collected": null, "cr": 0.75, "aov": 138, "projected_pending_revenue": 6417}, "3": {"total": 21, "paid": 0, "overdue": 0, "scheduled": 21, "revenue_collected": null, "cr": 0, "aov": 0, "projected_pending_revenue": 0}, "4": {"total": 7, "paid": 0, "overdue": 0, "scheduled": 7, "revenue_collected": null, "cr": 0, "aov": 0, "projected_pending_revenue": 0}}, "Poland": {"1": {"total": 63, "paid": 2, "overdue": 2, "scheduled": 59, "revenue_collected": null, "cr": null, "aov": null, "projected_pending_revenue": null}, "2": {"total": 26, "paid": 0, "overdue": 1, "scheduled": 25, "revenue_collected": null, "cr": null, "aov": null, "projected_pending_revenue": null}, "3": {"total": 4, "paid": 0, "overdue": 0, "scheduled": 4, "revenue_collected": null, "cr": null, "aov": null, "projected_pending_revenue": null}}, "Italy": {"1": {"total": 48, "paid": 0, "overdue": 1, "scheduled": 47, "revenue_collected": null, "cr": null, "aov": null, "projected_pending_revenue": null}, "2": {"total": 8, "paid": 0, "overdue": 1, "scheduled": 7, "revenue_collected": null, "cr": null, "aov": null, "projected_pending_revenue": null}, "3": {"total": 6, "paid": 0, "overdue": 0, "scheduled": 6, "revenue_collected": null, "cr": null, "aov": null, "projected_pending_revenue": null}}, "Spain": {"1": {"total": 112, "paid": 6, "overdue": 4, "scheduled": 102, "revenue_collected": 544.56, "cr": 0.521, "aov": 108, "projected_pending_revenue": 5960}, "2": {"total": 96, "paid": 4, "overdue": 4, "scheduled": 88, "revenue_collected": 331.19, "cr": 0.538, "aov": 107, "projected_pending_revenue": 5297}, "3": {"total": 46, "paid": 3, "overdue": 1, "scheduled": 42, "revenue_collected": 338.07, "cr": 0.559, "aov": 90, "projected_pending_revenue": 2164}, "4": {"total": 52, "paid": 4, "overdue": 5, "scheduled": 43, "revenue_collected": 306.96, "cr": 0.471, "aov": 89, "projected_pending_revenue": 2013}, "5": {"total": 36, "paid": 1, "overdue": 2, "scheduled": 33, "revenue_collected": 92.35, "cr": 0.392, "aov": 96, "projected_pending_revenue": 1317}, "6": {"total": 36, "paid": 2, "overdue": 3, "scheduled": 31, "revenue_collected": 160.36, "cr": 0.324, "aov": 114, "projected_pending_revenue": 1256}, "7": {"total": 47, "paid": 1, "overdue": 9, "scheduled": 37, "revenue_collected": 80.8, "cr": 0.378, "aov": 113, "projected_pending_revenue": 1965}, "8": {"total": 30, "paid": 0, "overdue": 4, "scheduled": 26, "revenue_collected": 0.0, "cr": 0.18, "aov": 100, "projected_pending_revenue": 540}, "9": {"total": 31, "paid": 2, "overdue": 5, "scheduled": 24, "revenue_collected": 228.56, "cr": 0.293, "aov": 105, "projected_pending_revenue": 892}}};
+const REGIONS_WITH_REAL_SUBS_CR = ['Brazil', 'Turkey', 'Indonesia', 'CIS', 'USA', 'UK', 'Spain'];
+
+function buildSubsModel(region) {
+  const raw = SUBS_DATA[region] || {};
+  const tierKeys = Object.keys(raw).sort((a, b) => Number(a) - Number(b));
+  const tiers = tierKeys.map((k) => ({ tier: k, ...raw[k] }));
+  const hasCrBenchmark = REGIONS_WITH_REAL_SUBS_CR.includes(region);
+  const hasRevenueData = tiers.some((t) => t.revenue_collected !== null && t.revenue_collected !== undefined);
+  const totalScheduled = tiers.reduce((s, t) => s + t.total, 0);
+  const totalPaid = tiers.reduce((s, t) => s + t.paid, 0);
+  const totalOverdue = tiers.reduce((s, t) => s + t.overdue, 0);
+  const totalPending = totalScheduled - totalPaid;
+  const revenueCollected = hasRevenueData ? tiers.reduce((s, t) => s + (t.revenue_collected || 0), 0) : null;
+  const projectedPending = hasCrBenchmark ? tiers.reduce((s, t) => s + (t.projected_pending_revenue || 0), 0) : null;
+  return { tiers, totalScheduled, totalPaid, totalOverdue, totalPending, revenueCollected, projectedPending, hasCrBenchmark, hasRevenueData };
+}
 
 const THEMES = {
   dark: {
@@ -119,15 +138,21 @@ function computeRegion(raw, region, from, to) {
   const inRange = (dt) => dt && dt >= from && dt <= to + 'T23:59:59';
   const tasksInRange = tasks.filter((r) => inRange(r.created_at));
 
-  // Current manager per lead = whoever has the MOST RECENT task on them (not
-  // just the first row we happen to see in the array, which was effectively
-  // random and scattered leads across the wrong managers).
-  const leadManager = new Map(); // student_id -> { name, lastDate }
+  // Current manager per lead — prefer the REAL, authoritative assignment field
+  // (ism_manager, from kodland_shared.basics_ismstudentinformation) when we
+  // have it. Fall back to "whoever has the most recent task" only for leads
+  // where that field is missing.
+  const leadManager = new Map(); // student_id -> name
+  seenStudent.forEach((row, sid) => {
+    if (row.ism_manager) leadManager.set(sid, normMgrName(row.ism_manager));
+  });
+  const taskLatestDate = new Map();
   tasks.forEach((r) => {
-    if (!r.manager) return;
-    const prev = leadManager.get(r.student_id);
-    if (!prev || (r.created_at && r.created_at > prev.lastDate)) {
-      leadManager.set(r.student_id, { name: normMgrName(r.manager), lastDate: r.created_at });
+    if (!r.manager || leadManager.has(r.student_id)) return; // real field already covers this lead
+    const prevDate = taskLatestDate.get(r.student_id);
+    if (!prevDate || (r.created_at && r.created_at > prevDate)) {
+      taskLatestDate.set(r.student_id, r.created_at);
+      leadManager.set(r.student_id, normMgrName(r.manager));
     }
   });
 
@@ -170,7 +195,7 @@ function computeRegion(raw, region, from, to) {
 
   // manager rollup — EVERY manager who currently owns at least one lead in this month's base
   const mgrLeadIds = new Map(); // name -> [student_id...]
-  leadManager.forEach(({ name }, sid) => {
+  leadManager.forEach((name, sid) => {
     if (!studentSet.has(sid)) return; // only leads that belong to THIS month's cohort
     if (!mgrLeadIds.has(name)) mgrLeadIds.set(name, []);
     mgrLeadIds.get(name).push(sid);
@@ -277,6 +302,83 @@ function ManagerRow({ t, m }) {
   );
 }
 
+function SubscriptionsPanel({ t, region }) {
+  const subs = useMemo(() => buildSubsModel(region), [region]);
+  const [tierIdx, setTierIdx] = useState('total');
+  const view = tierIdx === 'total' ? null : subs.tiers.find((tt) => tt.tier === tierIdx);
+
+  if (!subs.tiers.length) return <p className={`text-sm ${t.muted}`}>No subscriptions data for {region} yet.</p>;
+
+  return (
+    <>
+      <div className="flex gap-3 flex-wrap mb-5">
+        <Metric t={t} label="Leads this month" value={subs.totalScheduled.toLocaleString()} />
+        <Metric t={t} label="Paid" value={subs.totalPaid.toLocaleString()} accent="text-teal-500" sub={subs.totalScheduled ? `${Math.round((subs.totalPaid / subs.totalScheduled) * 100)}% of leads` : ''} />
+        <Metric t={t} label="Overdue" value={subs.totalOverdue.toLocaleString()} accent="text-amber-500" />
+        <Metric t={t} label="Revenue collected" value={subs.hasRevenueData ? `$${Math.round(subs.revenueCollected).toLocaleString()}` : 'n/a'} sub={subs.hasRevenueData ? 'real' : 'not pulled for this region yet'} accent="text-teal-500" />
+        <Metric t={t} label="Pending to collect (projected)" value={subs.hasCrBenchmark ? `$${Math.round(subs.projectedPending).toLocaleString()}` : 'no CR benchmark'} sub={subs.hasCrBenchmark ? `${subs.totalPending} pending × official CR/AOV per tier` : 'need official CR/AOV table'} accent="text-violet-500" />
+      </div>
+
+      <p className={`text-xs uppercase tracking-wide ${t.muted} mb-2`}>Filter by payment number</p>
+      <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">
+        {subs.tiers.map((tt) => (
+          <button key={tt.tier} onClick={() => setTierIdx(tt.tier)} className={`text-sm px-3 py-1.5 rounded-lg whitespace-nowrap border ${tierIdx === tt.tier ? t.pillActive : t.pillInactive}`}>
+            Payment {tt.tier} <span className={`font-mono ml-1 ${t.muted}`}>{tt.total}</span>
+          </button>
+        ))}
+        <span className={`w-px ${t.track} mx-1`} />
+        <button onClick={() => setTierIdx('total')} className={`text-sm px-3 py-1.5 rounded-lg whitespace-nowrap border font-medium ${tierIdx === 'total' ? t.totalActive : t.totalInactive}`}>
+          TOTAL <span className="font-mono ml-1">{subs.totalScheduled}</span>
+        </button>
+      </div>
+
+      {view ? (
+        <div className={`${t.panel} border ${t.panelBorder} rounded-xl p-4 mb-4`}>
+          <p className={`text-xs uppercase tracking-wide ${t.muted} mb-3`}>Payment {view.tier} — {region}</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div><p className={`text-xs ${t.muted}`}>Total leads</p><p className={`font-mono text-xl ${t.strong}`}>{view.total}</p></div>
+            <div><p className={`text-xs ${t.muted}`}>Paid</p><p className="font-mono text-xl text-teal-500">{view.paid}</p></div>
+            <div><p className={`text-xs ${t.muted}`}>Overdue</p><p className="font-mono text-xl text-rose-500">{view.overdue}</p></div>
+            <div><p className={`text-xs ${t.muted}`}>Scheduled (not yet due)</p><p className={`font-mono text-xl ${t.mutedStrong}`}>{view.scheduled}</p></div>
+          </div>
+          <div className={`mt-3 pt-3 border-t ${t.border} flex flex-wrap gap-6`}>
+            {view.revenue_collected !== null && view.revenue_collected !== undefined && (
+              <div><p className={`text-xs ${t.muted}`}>Revenue collected</p><p className="font-mono text-teal-500">${Math.round(view.revenue_collected).toLocaleString()}</p></div>
+            )}
+            {view.cr !== null && view.cr !== undefined ? (
+              <>
+                <div><p className={`text-xs ${t.muted}`}>Official CR / AOV for this tier</p><p className={`font-mono ${t.mutedStrong}`}>{Math.round(view.cr * 1000) / 10}% · ${view.aov}</p></div>
+                <div><p className={`text-xs ${t.muted}`}>Projected pending revenue</p><p className="font-mono text-violet-500">${Math.round(view.projected_pending_revenue).toLocaleString()}</p></div>
+              </>
+            ) : (
+              <div className={`flex items-center gap-1 text-xs ${t.muted}`}><Info size={12} />No official CR/AOV benchmark shared for this tier yet.</div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className={`${t.panel} border ${t.panelBorder} rounded-xl overflow-hidden mb-4 overflow-x-auto`}>
+          <table className="w-full text-sm">
+            <thead><tr className={`text-left text-xs uppercase tracking-wide ${t.muted} border-b ${t.border}`}>
+              <th className="py-2 px-3">Payment #</th><th className="py-2 px-3">Total</th><th className="py-2 px-3">Paid</th><th className="py-2 px-3">Overdue</th><th className="py-2 px-3">Scheduled</th><th className="py-2 px-3">CR / AOV</th><th className="py-2 px-3">Pending revenue (proj.)</th>
+            </tr></thead>
+            <tbody>{subs.tiers.map((tt) => (
+              <tr key={tt.tier} className={`border-b ${t.border} ${t.rowHover} cursor-pointer`} onClick={() => setTierIdx(tt.tier)}>
+                <td className={`py-2 px-3 ${t.strong}`}>Payment {tt.tier}</td>
+                <td className={`py-2 px-3 font-mono ${t.mutedStrong}`}>{tt.total}</td>
+                <td className="py-2 px-3 font-mono text-teal-500">{tt.paid}</td>
+                <td className="py-2 px-3 font-mono text-rose-500">{tt.overdue}</td>
+                <td className={`py-2 px-3 font-mono ${t.mutedStrong}`}>{tt.scheduled}</td>
+                <td className={`py-2 px-3 font-mono ${t.muted}`}>{tt.cr !== null && tt.cr !== undefined ? `${Math.round(tt.cr * 1000) / 10}% · $${tt.aov}` : '—'}</td>
+                <td className="py-2 px-3 font-mono text-violet-500">{tt.projected_pending_revenue !== null && tt.projected_pending_revenue !== undefined ? `$${Math.round(tt.projected_pending_revenue).toLocaleString()}` : 'n/a'}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
 function CalendarView({ t, tasksAll }) {
   const [range, setRange] = useState({ from: '2026-08-01', to: '2026-08-31' });
   const [taskFilter, setTaskFilter] = useState('All');
@@ -344,6 +446,7 @@ export default function PXOpsConsole() {
   const [theme, setTheme] = useState('dark');
   const [view, setView] = useState('ism');
   const [regionIdx, setRegionIdx] = useState(0);
+  const [subsRegionIdx, setSubsRegionIdx] = useState(0);
   const [ismTab, setIsmTab] = useState('managers');
   const [globalRange, setGlobalRange] = useState({ from: '2026-08-01', to: '2026-08-31' });
   const [raw, setRaw] = useState(null);
@@ -443,10 +546,23 @@ export default function PXOpsConsole() {
         )}
       </div>
 
-      {view !== 'ism' && (
+      {view === 'subs' && (
+        <div className="px-6 py-5 max-w-6xl mx-auto">
+          <div className="flex gap-1.5 mb-5 overflow-x-auto pb-1">
+            {REGIONS_SUBS.map((r, i) => (
+              <button key={r} onClick={() => setSubsRegionIdx(i)} className={`text-sm px-3 py-1.5 rounded-lg whitespace-nowrap border flex items-center gap-1.5 ${i === subsRegionIdx ? t.pillActive : t.pillInactive}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${i === subsRegionIdx ? 'bg-teal-400 animate-pulse' : t.dot}`} />{r}
+              </button>
+            ))}
+          </div>
+          <SubscriptionsPanel t={t} region={REGIONS_SUBS[subsRegionIdx]} />
+        </div>
+      )}
+
+      {view === 'total' && (
         <div className="px-6 py-16 max-w-6xl mx-auto text-center">
           <Layers size={28} className={`${t.muted} mx-auto mb-3`} />
-          <p className={`text-sm ${t.mutedStrong}`}>{view === 'subs' ? 'Subscriptions' : 'Total'} is next — ISM is being finalized first, this view isn't wired to live data yet.</p>
+          <p className={`text-sm ${t.mutedStrong}`}>Total (ISM + Subscriptions combined) is next up — coming right after Subscriptions is fully refreshed with live data.</p>
         </div>
       )}
 
