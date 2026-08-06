@@ -17,7 +17,7 @@ async function fetchJsonOptional(name) {
   try { return await fetchJson(name); } catch { return null; }
 }
 
-const REGIONS = ['LatAm PMC', 'Spain', 'Brazil', 'Italy', 'Poland', 'Turkey', 'Indonesia', 'UK', 'USA', 'CIS', 'GCC'];
+const REGIONS = ['LatAm PMC', 'Spain', 'Brazil', 'Italy', 'Poland', 'Turkey', 'Indonesia', 'UK', 'USA', 'CIS']; // GCC excluded — no ISM data yet, will apply to Subscriptions tab later
 
 const STAGES = [
   'Not yet touched', 'ISM start working', 'Negotiations ISM', 'Waiting for decision', 'Payment control ISM',
@@ -118,34 +118,41 @@ function computeRegion(raw, region, from, to) {
   const inRange = (dt) => dt && dt >= from && dt <= to + 'T23:59:59';
   const tasksInRange = tasks.filter((r) => inRange(r.created_at));
 
-  // manager assignment: whoever has ANY task on a lead, across all time we have
-  const leadManager = new Map();
-  tasks.forEach((r) => { if (r.manager && !leadManager.has(r.student_id)) leadManager.set(r.student_id, normMgrName(r.manager)); });
-
-  const touchedThisRange = new Set(tasksInRange.map((r) => r.student_id));
-  const assignedSet = new Set(tasks.map((r) => r.student_id));
-
-  const touchesInRange = (raw.touches || []).filter((r) => r.region === region && r.day >= from && r.day <= to);
-
-  // region-level status breakdown (real, restricted to actual base leads)
-  const stageCounts = {};
-  STAGES.forEach((s) => { stageCounts[s] = 0; });
-  let touchedCount = 0;
-  seenStudent.forEach((row, sid) => {
-    if (touchedThisRange.has(sid)) {
-      touchedCount++;
-      stageCounts[bucketStatus(row.status)]++;
-    } else {
-      stageCounts['Not yet touched']++;
+  // Current manager per lead = whoever has the MOST RECENT task on them (not
+  // just the first row we happen to see in the array, which was effectively
+  // random and scattered leads across the wrong managers).
+  const leadManager = new Map(); // student_id -> { name, lastDate }
+  tasks.forEach((r) => {
+    if (!r.manager) return;
+    const prev = leadManager.get(r.student_id);
+    if (!prev || (r.created_at && r.created_at > prev.lastDate)) {
+      leadManager.set(r.student_id, { name: normMgrName(r.manager), lastDate: r.created_at });
     }
   });
+
+  // "Touched" = has ANY task ever (real current state), restricted to leads
+  // actually in this month's base. This is a STATE, not tied to the date range.
+  const everTouchedIds = new Set(tasks.map((r) => r.student_id).filter((sid) => studentSet.has(sid)));
+  const touchesInRange = (raw.touches || []).filter((r) => r.region === region && r.day >= from && r.day <= to);
+
+  // Region-level status breakdown — always the lead's REAL current status
+  // from ism_base, for every lead that's ever been touched. Not gated by the
+  // selected date range (status doesn't change just because you picked a
+  // narrower window — that only affects flow metrics like revenue/calls below).
+  const stageCounts = {};
+  STAGES.forEach((s) => { stageCounts[s] = 0; });
+  seenStudent.forEach((row, sid) => {
+    if (everTouchedIds.has(sid)) stageCounts[bucketStatus(row.status)]++;
+    else stageCounts['Not yet touched']++;
+  });
+  const touchedCount = everTouchedIds.size;
   const touchedPct = totalLeads ? Math.round((touchedCount / totalLeads) * 100) : 0;
 
   const aov = AOV_GUESS[region] || 250;
   const pipelineLeads = PIPELINE_STAGES.reduce((s, k) => s + stageCounts[k], 0);
   const pipelineRevenue = Math.round(pipelineLeads * aov);
 
-  // revenue: only if raw.revenue is loaded (Question 5)
+  // revenue: only if raw.revenue is loaded (Question 5) — this IS a flow metric, so it stays range-gated
   let revenueAug = null, revenueByManager = {};
   if (raw.revenue) {
     const rev = raw.revenue.filter((r) => r.region === region && r.payment_department === 'ISM' && r.payment_dt >= from && r.payment_dt <= to + 'T23:59:59');
@@ -153,16 +160,17 @@ function computeRegion(raw, region, from, to) {
     rev.forEach((r) => { const m = normMgrName(r.manager); revenueByManager[m] = (revenueByManager[m] || 0) + (r.payment_amount_usd || 0); });
   }
 
-  // manager rollup — EVERY manager who appears in tasks for this region, no truncation
-  const mgrNames = new Set();
-  tasks.forEach((r) => { if (r.manager) mgrNames.add(normMgrName(r.manager)); });
+  // manager rollup — EVERY manager who currently owns at least one lead in this month's base
+  const mgrLeadIds = new Map(); // name -> [student_id...]
+  leadManager.forEach(({ name }, sid) => {
+    if (!studentSet.has(sid)) return; // only leads that belong to THIS month's cohort
+    if (!mgrLeadIds.has(name)) mgrLeadIds.set(name, []);
+    mgrLeadIds.get(name).push(sid);
+  });
 
-  const managers = Array.from(mgrNames).map((name) => {
-    const myLeadIds = [];
-    leadManager.forEach((m, sid) => { if (m === name) myLeadIds.push(sid); });
-    const myLeadSet = new Set(myLeadIds);
+  const managers = Array.from(mgrLeadIds.entries()).map(([name, myLeadIds]) => {
     const assigned = myLeadIds.length;
-    const touched = myLeadIds.filter((sid) => touchedThisRange.has(sid)).length;
+    const touched = myLeadIds.filter((sid) => everTouchedIds.has(sid)).length;
     const pending = assigned - touched;
 
     const overdue = tasks.filter((r) => normMgrName(r.manager) === name && r.is_completed === false && r.deadline && r.deadline < to).length;
@@ -173,10 +181,10 @@ function computeRegion(raw, region, from, to) {
     const talkMin = Math.round(myTouches.reduce((s, r) => s + (r.talk_seconds || 0), 0) / 60 * 10) / 10;
     const messages = myTouches.reduce((s, r) => s + (r.messages || 0), 0);
 
-    const stages = { 'Not yet touched': assigned - touched };
+    const stages = { 'Not yet touched': pending };
     STAGES.slice(1).forEach((s) => { stages[s] = 0; });
     myLeadIds.forEach((sid) => {
-      if (touchedThisRange.has(sid)) {
+      if (everTouchedIds.has(sid)) {
         const row = seenStudent.get(sid);
         if (row) stages[bucketStatus(row.status)]++;
       }
