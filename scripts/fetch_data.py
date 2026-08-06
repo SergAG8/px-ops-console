@@ -14,7 +14,13 @@ os.makedirs("public/data", exist_ok=True)
 
 for name, card_id in CARDS.items():
     print(f"Fetching {name} (card {card_id})...")
-    resp = requests.post(f"{BASE}/api/card/{card_id}/query", headers=HEADERS, timeout=180)
+    # limit=1000000 (via query params in the body) tells Metabase not to truncate at its default 2000-row cap
+    resp = requests.post(
+        f"{BASE}/api/card/{card_id}/query",
+        headers=HEADERS,
+        json={"constraints": {"max-results": 1000000, "max-results-bare-rows": 1000000}},
+        timeout=180,
+    )
     resp.raise_for_status()
     payload = resp.json()
 
