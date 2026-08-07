@@ -164,30 +164,26 @@ function computeRegion(raw, region, from, to) {
     }
   });
 
-  // "Ever touched" = has ANY task at all, any time — used only for the
-  // manager expandable detail's own "never touched" flag.
-  const everTouchedIds = new Set(tasks.map((r) => r.student_id).filter((sid) => studentSet.has(sid)));
-
-  // "Touched this period" = has a task specifically inside the selected date
-  // range (FLOW) — drives Utilization, Not-yet-touched, and the Managers
-  // table's Touched/Pending, so both top cards stay consistent with each other.
-  const touchedPeriodIds = new Set(tasksInRange.map((r) => r.student_id).filter((sid) => studentSet.has(sid)));
-  const touchedCount = touchedPeriodIds.size;
+  // ONE definition of "touched" everywhere: the lead's last ISM status trigger
+  // falls inside the selected date range. This is the same field BO's own
+  // Kanban date filter uses, so Utilization, "Not yet touched", and the
+  // Status Breakdown panel are now always self-consistent (they were using
+  // two different signals before — task creation vs status trigger — which
+  // is why 1030 "touched" didn't match the 328 that actually had a status).
+  const inTriggerRange = (dt) => dt && dt >= from && dt <= to + 'T23:59:59';
+  const triggerTouchedIds = new Set();
+  seenStudent.forEach((row, sid) => { if (inTriggerRange(row.last_ism_trigger_work_at)) triggerTouchedIds.add(sid); });
+  const touchedCount = triggerTouchedIds.size;
   const touchedPct = totalLeads ? Math.round((touchedCount / totalLeads) * 100) : 0;
 
   const touchesInRange = (raw.touches || []).filter((r) => r.region === region && r.day >= from && r.day <= to);
 
-  // Region-level status breakdown — matches BO's own Kanban filter behavior:
-  // BO's board has its own date-range filter on last_ism_trigger_work_at, so
-  // "how many are in Negotiations/Waiting" genuinely depends on the date range
-  // you pick, same as BO. A lead only counts under its real status if that
-  // status's last trigger date falls inside the selected range; otherwise it
-  // falls into "Not yet touched" for THIS specific window.
-  const inTriggerRange = (dt) => dt && dt >= from && dt <= to + 'T23:59:59';
+  // Region-level status breakdown — same triggerTouchedIds set as above, so
+  // the numbers here always sum exactly to totalLeads and match the top cards.
   const stageCounts = {};
   STAGES.forEach((s) => { stageCounts[s] = 0; });
   seenStudent.forEach((row, sid) => {
-    if (inTriggerRange(row.last_ism_trigger_work_at)) stageCounts[bucketStatus(row.status)]++;
+    if (triggerTouchedIds.has(sid)) stageCounts[bucketStatus(row.status)]++;
     else stageCounts['Not yet touched']++;
   });
 
@@ -213,10 +209,11 @@ function computeRegion(raw, region, from, to) {
 
   const managers = Array.from(mgrLeadIds.entries()).map(([name, myLeadIds]) => {
     const assigned = myLeadIds.length;
-    const touched = myLeadIds.filter((sid) => touchedPeriodIds.has(sid)).length;
+    const touched = myLeadIds.filter((sid) => triggerTouchedIds.has(sid)).length;
     const pending = assigned - touched;
 
     const overdue = tasks.filter((r) => normMgrName(r.manager) === name && r.is_completed === false && r.deadline && r.deadline < to).length;
+    const tasksCount = tasksInRange.filter((r) => normMgrName(r.manager) === name).length;
 
     const myTouches = touchesInRange.filter((r) => normMgrName(r.manager) === name);
     const calls = myTouches.reduce((s, r) => s + (r.calls || 0), 0);
@@ -236,7 +233,7 @@ function computeRegion(raw, region, from, to) {
     const mgrPipelineLeads = PIPELINE_STAGES.reduce((s, k) => s + stages[k], 0);
 
     return {
-      name, assigned, touched, pending, overdue,
+      name, assigned, touched, pending, overdue, tasksCount,
       calls, successfulCalls, talkMin, messages,
       touchesPerLead: touched ? Math.round(((calls + messages) / touched) * 100) / 100 : 0,
       stages, pipelineLeads: mgrPipelineLeads, pipelineRevenue: Math.round(mgrPipelineLeads * aov),
@@ -285,6 +282,7 @@ function ManagerRow({ t, m }) {
           </div>
         </td>
         <td className="py-2 px-3 font-mono text-amber-500">{m.pending}</td>
+        <td className={`py-2 px-3 font-mono ${m.tasksCount === 0 ? 'text-rose-500' : t.mutedStrong}`}>{m.tasksCount}</td>
         <td className="py-2 px-3 font-mono">{m.revenue === null ? <span className={t.muted}>pending</span> : <span className={m.hasSales ? 'text-teal-500' : 'text-rose-500'}>${Math.round(m.revenue).toLocaleString()}</span>}</td>
         <td className={`py-2 px-3 font-mono ${t.mutedStrong}`}><Phone size={11} className={`inline ${t.muted} mr-1`} />{m.calls}</td>
         <td className={`py-2 px-3 font-mono ${t.mutedStrong}`}><MessageCircle size={11} className={`inline ${t.muted} mr-1`} />{m.messages}</td>
@@ -294,7 +292,7 @@ function ManagerRow({ t, m }) {
       </tr>
       {expanded && (
         <tr className={`${t.subtle} border-b ${t.border}`}>
-          <td colSpan={10} className="px-3 py-3">
+          <td colSpan={11} className="px-3 py-3">
             <div className={`flex gap-6 text-xs ${t.mutedStrong} mb-3 flex-wrap`}>
               <span>Touches/lead <span className={`font-mono ${t.strong}`}>{m.touchesPerLead}</span></span>
               <span className={t.muted}>·</span>
@@ -604,11 +602,11 @@ export default function PXOpsConsole() {
 
             {ismTab === 'managers' ? (
               <div className={`${t.panel} border ${t.panelBorder} rounded-xl overflow-x-auto`}>
-                <table className="w-full text-sm min-w-[1000px]">
+                <table className="w-full text-sm min-w-[1100px]">
                   <thead>
                     <tr className={`text-left text-xs uppercase tracking-wide ${t.muted} border-b ${t.border}`}>
                       <th className="py-2 px-3">Manager</th><th className="py-2 px-3">Assigned</th><th className="py-2 px-3">Touched</th>
-                      <th className="py-2 px-3">Pending</th><th className="py-2 px-3">Revenue</th><th className="py-2 px-3">Calls</th>
+                      <th className="py-2 px-3">Pending</th><th className="py-2 px-3">Tasks</th><th className="py-2 px-3">Revenue</th><th className="py-2 px-3">Calls</th>
                       <th className="py-2 px-3">Messages</th><th className="py-2 px-3">Talk time</th><th className="py-2 px-3">Overdue</th><th className="py-2 px-3">Pipeline $</th>
                     </tr>
                   </thead>
