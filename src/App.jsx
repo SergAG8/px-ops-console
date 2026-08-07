@@ -22,13 +22,16 @@ const REGIONS_SUBS = [...REGIONS, 'GCC']; // GCC will show up once Subscriptions
 
 const STAGES = [
   'Not yet touched', 'ISM start working', 'Negotiations ISM', 'Waiting for decision', 'Payment control ISM',
-  'Not getting through ISM', 'Wallet is waiting to receive funds', 'Reserve base (prolongation)', 'Other (unconfirmed)',
+  'Not getting through ISM', 'Wallet is waiting to receive funds', 'Reserve base (prolongation)', 'Reserve base (grads)',
+  'Payment received', 'Call back', 'Closed', 'Freeze', 'N/A 5+ ISM', 'Other (unconfirmed)',
 ];
 const PIPELINE_STAGES = ['Negotiations ISM', 'Waiting for decision'];
 const STAGE_COLOR = {
   'Not yet touched': 'bg-amber-500', 'ISM start working': 'bg-teal-400', 'Negotiations ISM': 'bg-violet-400', 'Waiting for decision': 'bg-amber-300',
   'Payment control ISM': 'bg-sky-400', 'Not getting through ISM': 'bg-rose-400',
-  'Wallet is waiting to receive funds': 'bg-emerald-400', 'Reserve base (prolongation)': 'bg-fuchsia-400', 'Other (unconfirmed)': 'bg-slate-800',
+  'Wallet is waiting to receive funds': 'bg-emerald-400', 'Reserve base (prolongation)': 'bg-fuchsia-400', 'Reserve base (grads)': 'bg-purple-400',
+  'Payment received': 'bg-lime-400', 'Call back': 'bg-cyan-400', 'Closed': 'bg-red-500', 'Freeze': 'bg-blue-300',
+  'N/A 5+ ISM': 'bg-slate-500', 'Other (unconfirmed)': 'bg-slate-800',
 };
 function bucketStatus(raw) {
   const s = String(raw || '').toLowerCase();
@@ -38,8 +41,13 @@ function bucketStatus(raw) {
   if (/payment control|контроль оплаты/.test(s)) return 'Payment control ISM';
   if (/not getting through|не дозвонились|not reachable/.test(s)) return 'Not getting through ISM';
   if (/wallet is waiting|waiting to receive funds|ожидаем пополнения|ожидает зачисления/.test(s)) return 'Wallet is waiting to receive funds';
-  if (/reserve|резерв/.test(s)) return 'Reserve base (prolongation)';
-  if (/^na|^n\/a|na 5\+|отказ/.test(s)) return 'Other (unconfirmed)';
+  if (/reserve.*grad|резерв выпускник/.test(s)) return 'Reserve base (grads)';
+  if (/reserve.*prolong|резерв отток/.test(s)) return 'Reserve base (prolongation)';
+  if (/payment received|installment payment received|баланс пополнен/.test(s)) return 'Payment received';
+  if (/call ?back|follow up/.test(s)) return 'Call back';
+  if (/^closed$|отказ \(негатив\)/.test(s)) return 'Closed';
+  if (/^freeze$|заморозка/.test(s)) return 'Freeze';
+  if (/^n\/?a\s*5\+|ндз 4\+/.test(s)) return 'N/A 5+ ISM';
   return 'Other (unconfirmed)';
 }
 function normMgrName(n) {
@@ -156,30 +164,32 @@ function computeRegion(raw, region, from, to) {
     }
   });
 
-  // "Ever touched" = has ANY task at all, any time (real CURRENT STATE) — drives
-  // status breakdown / pipeline below, which shouldn't change just because you
-  // narrowed the date filter.
+  // "Ever touched" = has ANY task at all, any time — used only for the
+  // manager expandable detail's own "never touched" flag.
   const everTouchedIds = new Set(tasks.map((r) => r.student_id).filter((sid) => studentSet.has(sid)));
 
   // "Touched this period" = has a task specifically inside the selected date
-  // range (FLOW) — drives Utilization and the Managers table's Touched/Pending,
-  // so picking "today" actually shows a small number, not everyone at 100%.
+  // range (FLOW) — drives Utilization, Not-yet-touched, and the Managers
+  // table's Touched/Pending, so both top cards stay consistent with each other.
   const touchedPeriodIds = new Set(tasksInRange.map((r) => r.student_id).filter((sid) => studentSet.has(sid)));
+  const touchedCount = touchedPeriodIds.size;
+  const touchedPct = totalLeads ? Math.round((touchedCount / totalLeads) * 100) : 0;
 
   const touchesInRange = (raw.touches || []).filter((r) => r.region === region && r.day >= from && r.day <= to);
 
-  // Region-level status breakdown — always the lead's REAL current status
-  // from ism_base, for every lead that's ever been touched. Not gated by the
-  // selected date range (status doesn't change just because you picked a
-  // narrower window — that only affects flow metrics like revenue/calls below).
+  // Region-level status breakdown — matches BO's own Kanban filter behavior:
+  // BO's board has its own date-range filter on last_ism_trigger_work_at, so
+  // "how many are in Negotiations/Waiting" genuinely depends on the date range
+  // you pick, same as BO. A lead only counts under its real status if that
+  // status's last trigger date falls inside the selected range; otherwise it
+  // falls into "Not yet touched" for THIS specific window.
+  const inTriggerRange = (dt) => dt && dt >= from && dt <= to + 'T23:59:59';
   const stageCounts = {};
   STAGES.forEach((s) => { stageCounts[s] = 0; });
   seenStudent.forEach((row, sid) => {
-    if (everTouchedIds.has(sid)) stageCounts[bucketStatus(row.status)]++;
+    if (inTriggerRange(row.last_ism_trigger_work_at)) stageCounts[bucketStatus(row.status)]++;
     else stageCounts['Not yet touched']++;
   });
-  const touchedCount = touchedPeriodIds.size;
-  const touchedPct = totalLeads ? Math.round((touchedCount / totalLeads) * 100) : 0;
 
   const aov = AOV_GUESS[region] || 250;
   const pipelineLeads = PIPELINE_STAGES.reduce((s, k) => s + stageCounts[k], 0);
@@ -205,7 +215,6 @@ function computeRegion(raw, region, from, to) {
     const assigned = myLeadIds.length;
     const touched = myLeadIds.filter((sid) => touchedPeriodIds.has(sid)).length;
     const pending = assigned - touched;
-    const touchedEverCount = myLeadIds.filter((sid) => everTouchedIds.has(sid)).length;
 
     const overdue = tasks.filter((r) => normMgrName(r.manager) === name && r.is_completed === false && r.deadline && r.deadline < to).length;
 
@@ -215,16 +224,14 @@ function computeRegion(raw, region, from, to) {
     const talkMin = Math.round(myTouches.reduce((s, r) => s + (r.talk_seconds || 0), 0) / 60 * 10) / 10;
     const messages = myTouches.reduce((s, r) => s + (r.messages || 0), 0);
 
-    // Status detail (expandable row) reflects REAL CURRENT state — a lead
-    // worked in July still shows its real status today, even if untouched
-    // this exact period. "Not yet touched" here = never touched at all.
-    const stages = { 'Not yet touched': assigned - touchedEverCount };
-    STAGES.slice(1).forEach((s) => { stages[s] = 0; });
+    // Status detail (expandable row) — same date-range-gated status logic as
+    // the region panel, restricted to this manager's own leads.
+    const stages = {};
+    STAGES.forEach((s) => { stages[s] = 0; });
     myLeadIds.forEach((sid) => {
-      if (everTouchedIds.has(sid)) {
-        const row = seenStudent.get(sid);
-        if (row) stages[bucketStatus(row.status)]++;
-      }
+      const row = seenStudent.get(sid);
+      if (row && inTriggerRange(row.last_ism_trigger_work_at)) stages[bucketStatus(row.status)]++;
+      else stages['Not yet touched']++;
     });
     const mgrPipelineLeads = PIPELINE_STAGES.reduce((s, k) => s + stages[k], 0);
 
