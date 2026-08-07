@@ -25,7 +25,7 @@ const STAGES = [
   'Not getting through ISM', 'Wallet is waiting to receive funds', 'Reserve base (prolongation)', 'Reserve base (grads)',
   'Payment received', 'Call back', 'Closed', 'Freeze', 'N/A 5+ ISM', 'Other (unconfirmed)',
 ];
-const PIPELINE_STAGES = ['Negotiations ISM', 'Waiting for decision'];
+const PIPELINE_STAGES = ['Negotiations ISM', 'Waiting for decision', 'Payment control ISM'];
 const STAGE_COLOR = {
   'Not yet touched': 'bg-amber-500', 'ISM start working': 'bg-teal-400', 'Negotiations ISM': 'bg-violet-400', 'Waiting for decision': 'bg-amber-300',
   'Payment control ISM': 'bg-sky-400', 'Not getting through ISM': 'bg-rose-400',
@@ -243,7 +243,8 @@ function computeRegion(raw, region, from, to) {
       revenue: revenueByManager[name] ?? null,
       hasSales: (revenueByManager[name] ?? 0) > 0,
     };
-  }).sort((a, b) => (b.revenue || 0) - (a.revenue || 0) || b.touched - a.touched);
+  }).filter((m) => m.assigned > 1) // drop noise: Team Leaders / inactive accounts that only show up with 0-1 leads
+    .sort((a, b) => (b.revenue || 0) - (a.revenue || 0) || b.touched - a.touched);
 
   return {
     region, totalLeads, blocks, touchedCount, touchedPct, stageCounts, pipelineLeads, pipelineRevenue,
@@ -582,7 +583,7 @@ export default function PXOpsConsole() {
               <Metric t={t} label="Utilization" value={`${data.touchedPct}%`} sub={`${data.touchedCount} touched, ${globalRange.from} → ${globalRange.to}`} accent="text-teal-500" />
               <Metric t={t} label="Not yet touched" value={data.stageCounts['Not yet touched']} accent="text-amber-500" />
               <Metric t={t} label="Revenue (ISM)" value={data.revenueAug !== null ? `$${Math.round(data.revenueAug).toLocaleString()}` : 'n/a'} sub="real payments, this range" icon={DollarSign} accent={data.revenueAug !== null ? 'text-teal-500' : t.muted} />
-              <Metric t={t} label="Pipeline (Negot.+Waiting)" value={`$${data.pipelineRevenue.toLocaleString()}`} sub={`${data.pipelineLeads} leads`} icon={TrendingUp} accent="text-violet-500" />
+              <Metric t={t} label="Pipeline (Negot.+Waiting+Pay.ctrl)" value={`$${data.pipelineRevenue.toLocaleString()}`} sub={`${data.pipelineLeads} leads`} icon={TrendingUp} accent="text-violet-500" />
             </div>
 
             <div className={`${t.panel} border ${t.panelBorder} rounded-xl p-4 mb-4`}>
