@@ -64,7 +64,7 @@ function buildSubsModel(raw, region) {
   const tiers = payNumbers.map((pn) => {
     const c = current.get(pn);
     const ref = reference.get(pn);
-    const cr = ref && ref.total ? ref.paid / ref.total : null;
+    const cr = ref && ref.cr !== undefined && ref.cr !== null ? ref.cr : null;
     const aov = ref && ref.aov !== undefined && ref.aov !== null ? Math.round(ref.aov) : null;
     const total = c ? c.total : 0;
     const paid = c ? c.paid : 0;
