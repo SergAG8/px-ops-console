@@ -64,7 +64,7 @@ function buildSubsModel(raw, region) {
   const tiers = payNumbers.map((pn) => {
     const c = current.get(pn);
     const ref = reference.get(pn);
-    const cr = ref && ref.cr !== undefined && ref.cr !== null ? ref.cr : null;
+    const cr = ref && ref.total ? ref.paid / ref.total : null;
     const aov = ref && ref.aov !== undefined && ref.aov !== null ? Math.round(ref.aov) : null;
     const total = c ? c.total : 0;
     const paid = c ? c.paid : 0;
@@ -632,12 +632,59 @@ export default function PXOpsConsole() {
         );
       })()}
 
-      {view === 'total' && (
-        <div className="px-6 py-16 max-w-6xl mx-auto text-center">
-          <Layers size={28} className={`${t.muted} mx-auto mb-3`} />
-          <p className={`text-sm ${t.mutedStrong}`}>Total (ISM + Subscriptions combined) is next up — coming right after Subscriptions is fully refreshed with live data.</p>
-        </div>
-      )}
+      {view === 'total' && (() => {
+        const rows = REGIONS_SUBS.map((region) => {
+          const ism = computed.find((d) => d.region === region);
+          const subs = buildSubsModel(raw, region);
+          const leads = (ism ? ism.totalLeads : 0) + subs.totalScheduled;
+          const collected = (ism ? (ism.revenueAug || 0) : 0) + (subs.revenueCollected || 0);
+          const projected = (ism ? ism.pipelineRevenue : 0) + (subs.projectedPending || 0);
+          const pct = (collected + projected) > 0 ? Math.round((collected / (collected + projected)) * 1000) / 10 : null;
+          return { region, leads, collected, projected, pct };
+        });
+        const totals = rows.reduce((acc, r) => ({
+          leads: acc.leads + r.leads, collected: acc.collected + r.collected, projected: acc.projected + r.projected,
+        }), { leads: 0, collected: 0, projected: 0 });
+        const totalPct = (totals.collected + totals.projected) > 0 ? Math.round((totals.collected / (totals.collected + totals.projected)) * 1000) / 10 : 0;
+
+        return (
+          <div className="px-6 py-5 max-w-6xl mx-auto">
+            <div className="flex gap-3 flex-wrap mb-5">
+              <Metric t={t} label="Leads total — all regions" value={totals.leads.toLocaleString()} sub="ISM + Subscriptions" />
+              <Metric t={t} label="Revenue collected" value={`$${Math.round(totals.collected).toLocaleString()}`} accent="text-teal-500" />
+              <Metric t={t} label="Projected pending" value={`$${Math.round(totals.projected).toLocaleString()}`} accent="text-violet-500" />
+              <Metric t={t} label="% collected" value={`${totalPct}%`} sub="collected ÷ (collected + projected)" />
+            </div>
+            <div className={`${t.panel} border ${t.panelBorder} rounded-xl overflow-x-auto`}>
+              <table className="w-full text-sm">
+                <thead><tr className={`text-left text-xs uppercase tracking-wide ${t.muted} border-b ${t.border}`}>
+                  <th className="py-2 px-3">Region</th><th className="py-2 px-3">Leads</th><th className="py-2 px-3">Collected</th><th className="py-2 px-3">Projected</th><th className="py-2 px-3">% collected</th>
+                </tr></thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.region} className={`border-b ${t.border} ${t.rowHover}`}>
+                      <td className={`py-2 px-3 ${t.strong}`}>{r.region}</td>
+                      <td className={`py-2 px-3 font-mono ${t.mutedStrong}`}>{r.leads.toLocaleString()}</td>
+                      <td className="py-2 px-3 font-mono text-teal-500">${Math.round(r.collected).toLocaleString()}</td>
+                      <td className="py-2 px-3 font-mono text-violet-500">${Math.round(r.projected).toLocaleString()}</td>
+                      <td className={`py-2 px-3 font-mono ${t.mutedStrong}`}>{r.pct !== null ? `${r.pct}%` : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className={`border-t-2 ${t.border}`}>
+                    <td className={`py-2 px-3 font-medium ${t.strong}`}>Total</td>
+                    <td className={`py-2 px-3 font-mono font-medium ${t.strong}`}>{totals.leads.toLocaleString()}</td>
+                    <td className="py-2 px-3 font-mono font-medium text-teal-500">${Math.round(totals.collected).toLocaleString()}</td>
+                    <td className="py-2 px-3 font-mono font-medium text-violet-500">${Math.round(totals.projected).toLocaleString()}</td>
+                    <td className={`py-2 px-3 font-mono font-medium ${t.strong}`}>{totalPct}%</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
 
       {view === 'ism' && (
       <div className="px-6 py-5 max-w-6xl mx-auto">
