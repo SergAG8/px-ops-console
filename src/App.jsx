@@ -527,7 +527,6 @@ export default function PXOpsConsole() {
           <div className="flex items-center gap-2">
             <Radio size={18} className="text-teal-500" />
             <h1 className={`text-base font-medium ${t.strong}`}>PX Ops Console</h1>
-            <span className={`text-xs font-mono ${t.muted}`}>ISM · live from Metabase</span>
           </div>
           <div className="flex items-center gap-3">
             <div className={`flex ${t.panel} border ${t.panelBorder} rounded-full p-1 gap-1`}>
@@ -671,15 +670,6 @@ export default function PXOpsConsole() {
                     </tr>
                   ))}
                 </tbody>
-                <tfoot>
-                  <tr className={`border-t-2 ${t.border}`}>
-                    <td className={`py-2 px-3 font-medium ${t.strong}`}>Total</td>
-                    <td className={`py-2 px-3 font-mono font-medium ${t.strong}`}>{totals.leads.toLocaleString()}</td>
-                    <td className="py-2 px-3 font-mono font-medium text-teal-500">${Math.round(totals.collected).toLocaleString()}</td>
-                    <td className="py-2 px-3 font-mono font-medium text-violet-500">${Math.round(totals.projected).toLocaleString()}</td>
-                    <td className={`py-2 px-3 font-mono font-medium ${t.strong}`}>{totalPct}%</td>
-                  </tr>
-                </tfoot>
               </table>
             </div>
           </div>
