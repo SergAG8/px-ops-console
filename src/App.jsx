@@ -55,14 +55,28 @@ function normMgrName(n) {
 }
 const AOV_GUESS = { 'LatAm PMC': 274, Brazil: 251, Turkey: 365, Indonesia: 136, UK: 385, CIS: 521, Poland: 200, Italy: 200, USA: 200, Spain: 250, GCC: 250 };
 
-const SUBS_DATA = {"LatAm PMC": {"0": {"total": 1, "paid": 1, "overdue": 0, "scheduled": 0, "revenue_collected": 182.56, "cr": null, "aov": null, "projected_pending_revenue": null}, "1": {"total": 842, "paid": 37, "overdue": 57, "scheduled": 748, "revenue_collected": 6502.29, "cr": null, "aov": null, "projected_pending_revenue": null}, "2": {"total": 788, "paid": 24, "overdue": 47, "scheduled": 717, "revenue_collected": 3059.49, "cr": null, "aov": null, "projected_pending_revenue": null}, "3": {"total": 555, "paid": 24, "overdue": 35, "scheduled": 496, "revenue_collected": 3038.89, "cr": null, "aov": null, "projected_pending_revenue": null}, "4": {"total": 275, "paid": 11, "overdue": 24, "scheduled": 240, "revenue_collected": 1878.54, "cr": null, "aov": null, "projected_pending_revenue": null}, "5": {"total": 273, "paid": 12, "overdue": 21, "scheduled": 240, "revenue_collected": 986.82, "cr": null, "aov": null, "projected_pending_revenue": null}, "6": {"total": 281, "paid": 11, "overdue": 22, "scheduled": 248, "revenue_collected": 963.63, "cr": null, "aov": null, "projected_pending_revenue": null}, "7": {"total": 238, "paid": 5, "overdue": 23, "scheduled": 210, "revenue_collected": 524.48, "cr": null, "aov": null, "projected_pending_revenue": null}, "8": {"total": 120, "paid": 4, "overdue": 13, "scheduled": 103, "revenue_collected": 185.26, "cr": null, "aov": null, "projected_pending_revenue": null}, "9": {"total": 145, "paid": 4, "overdue": 20, "scheduled": 121, "revenue_collected": 349.22, "cr": null, "aov": null, "projected_pending_revenue": null}}, "Brazil": {"1": {"total": 42, "paid": 0, "overdue": 4, "scheduled": 38, "revenue_collected": null, "cr": 0.326, "aov": 98, "projected_pending_revenue": 1342}, "2": {"total": 22, "paid": 0, "overdue": 2, "scheduled": 20, "revenue_collected": null, "cr": 0.279, "aov": 80, "projected_pending_revenue": 491}, "3": {"total": 50, "paid": 0, "overdue": 4, "scheduled": 46, "revenue_collected": null, "cr": 0.256, "aov": 106, "projected_pending_revenue": 1357}, "4": {"total": 32, "paid": 0, "overdue": 6, "scheduled": 26, "revenue_collected": null, "cr": 0.118, "aov": 128, "projected_pending_revenue": 483}, "5": {"total": 51, "paid": 0, "overdue": 3, "scheduled": 48, "revenue_collected": null, "cr": 0.143, "aov": 47, "projected_pending_revenue": 343}, "6": {"total": 15, "paid": 0, "overdue": 0, "scheduled": 15, "revenue_collected": null, "cr": 0, "aov": 0, "projected_pending_revenue": 0}, "7": {"total": 5, "paid": 0, "overdue": 0, "scheduled": 5, "revenue_collected": null, "cr": 0.15, "aov": 152, "projected_pending_revenue": 114}, "9": {"total": 3, "paid": 0, "overdue": 0, "scheduled": 3, "revenue_collected": null, "cr": 0, "aov": 0, "projected_pending_revenue": 0}}, "Turkey": {"1": {"total": 72, "paid": 0, "overdue": 9, "scheduled": 63, "revenue_collected": null, "cr": 0.533, "aov": 223, "projected_pending_revenue": 8558}, "2": {"total": 45, "paid": 0, "overdue": 3, "scheduled": 42, "revenue_collected": null, "cr": 0.524, "aov": 114, "projected_pending_revenue": 2688}, "3": {"total": 55, "paid": 0, "overdue": 10, "scheduled": 45, "revenue_collected": null, "cr": 0.211, "aov": 97, "projected_pending_revenue": 1126}, "4": {"total": 21, "paid": 0, "overdue": 1, "scheduled": 20, "revenue_collected": null, "cr": 0.306, "aov": 97, "projected_pending_revenue": 623}, "5": {"total": 33, "paid": 0, "overdue": 2, "scheduled": 31, "revenue_collected": null, "cr": 0.171, "aov": 104, "projected_pending_revenue": 587}, "6": {"total": 23, "paid": 0, "overdue": 1, "scheduled": 22, "revenue_collected": null, "cr": 0.034, "aov": 55, "projected_pending_revenue": 43}, "7": {"total": 15, "paid": 0, "overdue": 2, "scheduled": 13, "revenue_collected": null, "cr": 0.15, "aov": 152, "projected_pending_revenue": 342}}, "Indonesia": {"1": {"total": 56, "paid": 0, "overdue": 4, "scheduled": 52, "revenue_collected": null, "cr": 0.563, "aov": 82, "projected_pending_revenue": 2585}, "2": {"total": 58, "paid": 0, "overdue": 4, "scheduled": 54, "revenue_collected": null, "cr": 0.643, "aov": 84, "projected_pending_revenue": 3133}, "3": {"total": 1, "paid": 0, "overdue": 0, "scheduled": 1, "revenue_collected": null, "cr": null, "aov": null, "projected_pending_revenue": null}}, "UK": {"1": {"total": 83, "paid": 0, "overdue": 7, "scheduled": 76, "revenue_collected": null, "cr": 0.614, "aov": 263, "projected_pending_revenue": 13403}, "2": {"total": 56, "paid": 0, "overdue": 2, "scheduled": 54, "revenue_collected": null, "cr": 0.656, "aov": 299, "projected_pending_revenue": 10984}, "3": {"total": 46, "paid": 0, "overdue": 1, "scheduled": 45, "revenue_collected": null, "cr": 0.559, "aov": 223, "projected_pending_revenue": 5734}, "4": {"total": 8, "paid": 0, "overdue": 0, "scheduled": 8, "revenue_collected": null, "cr": 0.5, "aov": 238, "projected_pending_revenue": 952}, "5": {"total": 11, "paid": 0, "overdue": 1, "scheduled": 10, "revenue_collected": null, "cr": 0.05, "aov": 124, "projected_pending_revenue": 68}, "6": {"total": 3, "paid": 0, "overdue": 1, "scheduled": 2, "revenue_collected": null, "cr": 0.429, "aov": 114, "projected_pending_revenue": 147}, "7": {"total": 20, "paid": 0, "overdue": 2, "scheduled": 18, "revenue_collected": null, "cr": 0.214, "aov": 175, "projected_pending_revenue": 749}, "8": {"total": 8, "paid": 0, "overdue": 2, "scheduled": 6, "revenue_collected": null, "cr": 0.294, "aov": 125, "projected_pending_revenue": 294}, "9": {"total": 17, "paid": 0, "overdue": 2, "scheduled": 15, "revenue_collected": null, "cr": 0, "aov": 0, "projected_pending_revenue": 0}}, "CIS": {"1": {"total": 143, "paid": 0, "overdue": 19, "scheduled": 124, "revenue_collected": null, "cr": 0.42, "aov": 135, "projected_pending_revenue": 8108}, "2": {"total": 91, "paid": 0, "overdue": 9, "scheduled": 82, "revenue_collected": null, "cr": 0.469, "aov": 147, "projected_pending_revenue": 6274}, "3": {"total": 91, "paid": 0, "overdue": 15, "scheduled": 76, "revenue_collected": null, "cr": 0.378, "aov": 152, "projected_pending_revenue": 5228}, "4": {"total": 103, "paid": 0, "overdue": 11, "scheduled": 92, "revenue_collected": null, "cr": 0.283, "aov": 150, "projected_pending_revenue": 4372}, "5": {"total": 10, "paid": 0, "overdue": 1, "scheduled": 9, "revenue_collected": null, "cr": 0.292, "aov": 147, "projected_pending_revenue": 429}, "6": {"total": 5, "paid": 0, "overdue": 1, "scheduled": 4, "revenue_collected": null, "cr": 0.227, "aov": 161, "projected_pending_revenue": 183}, "7": {"total": 16, "paid": 0, "overdue": 2, "scheduled": 14, "revenue_collected": null, "cr": 0.5, "aov": 140, "projected_pending_revenue": 1120}, "9": {"total": 1, "paid": 0, "overdue": 0, "scheduled": 1, "revenue_collected": null, "cr": 0, "aov": 0, "projected_pending_revenue": 0}}, "USA": {"1": {"total": 82, "paid": 0, "overdue": 4, "scheduled": 78, "revenue_collected": null, "cr": 0.667, "aov": 158, "projected_pending_revenue": 8642}, "2": {"total": 62, "paid": 0, "overdue": 4, "scheduled": 58, "revenue_collected": null, "cr": 0.75, "aov": 138, "projected_pending_revenue": 6417}, "3": {"total": 21, "paid": 0, "overdue": 0, "scheduled": 21, "revenue_collected": null, "cr": 0, "aov": 0, "projected_pending_revenue": 0}, "4": {"total": 7, "paid": 0, "overdue": 0, "scheduled": 7, "revenue_collected": null, "cr": 0, "aov": 0, "projected_pending_revenue": 0}}, "Poland": {"1": {"total": 63, "paid": 2, "overdue": 2, "scheduled": 59, "revenue_collected": null, "cr": null, "aov": null, "projected_pending_revenue": null}, "2": {"total": 26, "paid": 0, "overdue": 1, "scheduled": 25, "revenue_collected": null, "cr": null, "aov": null, "projected_pending_revenue": null}, "3": {"total": 4, "paid": 0, "overdue": 0, "scheduled": 4, "revenue_collected": null, "cr": null, "aov": null, "projected_pending_revenue": null}}, "Italy": {"1": {"total": 48, "paid": 0, "overdue": 1, "scheduled": 47, "revenue_collected": null, "cr": null, "aov": null, "projected_pending_revenue": null}, "2": {"total": 8, "paid": 0, "overdue": 1, "scheduled": 7, "revenue_collected": null, "cr": null, "aov": null, "projected_pending_revenue": null}, "3": {"total": 6, "paid": 0, "overdue": 0, "scheduled": 6, "revenue_collected": null, "cr": null, "aov": null, "projected_pending_revenue": null}}, "Spain": {"1": {"total": 112, "paid": 6, "overdue": 4, "scheduled": 102, "revenue_collected": 544.56, "cr": 0.521, "aov": 108, "projected_pending_revenue": 5960}, "2": {"total": 96, "paid": 4, "overdue": 4, "scheduled": 88, "revenue_collected": 331.19, "cr": 0.538, "aov": 107, "projected_pending_revenue": 5297}, "3": {"total": 46, "paid": 3, "overdue": 1, "scheduled": 42, "revenue_collected": 338.07, "cr": 0.559, "aov": 90, "projected_pending_revenue": 2164}, "4": {"total": 52, "paid": 4, "overdue": 5, "scheduled": 43, "revenue_collected": 306.96, "cr": 0.471, "aov": 89, "projected_pending_revenue": 2013}, "5": {"total": 36, "paid": 1, "overdue": 2, "scheduled": 33, "revenue_collected": 92.35, "cr": 0.392, "aov": 96, "projected_pending_revenue": 1317}, "6": {"total": 36, "paid": 2, "overdue": 3, "scheduled": 31, "revenue_collected": 160.36, "cr": 0.324, "aov": 114, "projected_pending_revenue": 1256}, "7": {"total": 47, "paid": 1, "overdue": 9, "scheduled": 37, "revenue_collected": 80.8, "cr": 0.378, "aov": 113, "projected_pending_revenue": 1965}, "8": {"total": 30, "paid": 0, "overdue": 4, "scheduled": 26, "revenue_collected": 0.0, "cr": 0.18, "aov": 100, "projected_pending_revenue": 540}, "9": {"total": 31, "paid": 2, "overdue": 5, "scheduled": 24, "revenue_collected": 228.56, "cr": 0.293, "aov": 105, "projected_pending_revenue": 892}}};
-const REGIONS_WITH_REAL_SUBS_CR = ['Brazil', 'Turkey', 'Indonesia', 'CIS', 'USA', 'UK', 'Spain'];
+function buildSubsModel(raw, region) {
+  const rows = (raw.subs || []).filter((r) => r.region === region);
+  const current = new Map(rows.filter((r) => r.period === 'current').map((r) => [r.pay_number, r]));
+  const reference = new Map(rows.filter((r) => r.period === 'reference').map((r) => [r.pay_number, r]));
+  const payNumbers = Array.from(new Set([...current.keys(), ...reference.keys()])).sort((a, b) => a - b);
 
-function buildSubsModel(region) {
-  const raw = SUBS_DATA[region] || {};
-  const tierKeys = Object.keys(raw).sort((a, b) => Number(a) - Number(b));
-  const tiers = tierKeys.map((k) => ({ tier: k, ...raw[k] }));
-  const hasCrBenchmark = REGIONS_WITH_REAL_SUBS_CR.includes(region);
+  const tiers = payNumbers.map((pn) => {
+    const c = current.get(pn);
+    const ref = reference.get(pn);
+    const cr = ref && ref.total ? ref.paid / ref.total : null;
+    const aov = ref && ref.aov !== undefined ? ref.aov : null;
+    const total = c ? c.total : 0;
+    const paid = c ? c.paid : 0;
+    const overdue = c ? c.overdue : 0;
+    const scheduled = c ? c.scheduled : 0;
+    const revenue_collected = c ? c.revenue_collected : null;
+    const pendingLeads = total - paid;
+    const projected_pending_revenue = (cr !== null && aov !== null) ? Math.round(pendingLeads * cr * aov * 100) / 100 : null;
+    return { tier: String(pn), total, paid, overdue, scheduled, revenue_collected, cr, aov, projected_pending_revenue };
+  });
+
+  const hasCrBenchmark = tiers.some((t) => t.cr !== null);
   const hasRevenueData = tiers.some((t) => t.revenue_collected !== null && t.revenue_collected !== undefined);
   const totalScheduled = tiers.reduce((s, t) => s + t.total, 0);
   const totalPaid = tiers.reduce((s, t) => s + t.paid, 0);
@@ -308,12 +322,13 @@ function ManagerRow({ t, m }) {
   );
 }
 
-function SubscriptionsPanel({ t, region }) {
-  const subs = useMemo(() => buildSubsModel(region), [region]);
+function SubscriptionsPanel({ t, raw, region }) {
+  const subs = useMemo(() => buildSubsModel(raw, region), [raw, region]);
   const [tierIdx, setTierIdx] = useState('total');
   const view = tierIdx === 'total' ? null : subs.tiers.find((tt) => tt.tier === tierIdx);
 
   if (!subs.tiers.length) return <p className={`text-sm ${t.muted}`}>No subscriptions data for {region} yet.</p>;
+
 
   return (
     <>
@@ -463,8 +478,8 @@ export default function PXOpsConsole() {
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    Promise.all([fetchJson('ism_base'), fetchJson('ism_tasks'), fetchJson('ism_touches'), fetchJsonOptional('ism_revenue')])
-      .then(([base, tasks, touches, revenue]) => { if (alive) { setRaw({ base, tasks, touches, revenue }); setLoading(false); } })
+    Promise.all([fetchJson('ism_base'), fetchJson('ism_tasks'), fetchJson('ism_touches'), fetchJsonOptional('ism_revenue'), fetchJsonOptional('subs_installments')])
+      .then(([base, tasks, touches, revenue, subs]) => { if (alive) { setRaw({ base, tasks, touches, revenue, subs }); setLoading(false); } })
       .catch((e) => { if (alive) { setError(e.message); setLoading(false); } });
     return () => { alive = false; };
   }, []);
@@ -561,7 +576,7 @@ export default function PXOpsConsole() {
               </button>
             ))}
           </div>
-          <SubscriptionsPanel t={t} region={REGIONS_SUBS[subsRegionIdx]} />
+          <SubscriptionsPanel t={t} raw={raw} region={REGIONS_SUBS[subsRegionIdx]} />
         </div>
       )}
 
