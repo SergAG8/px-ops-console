@@ -56,7 +56,7 @@ function normMgrName(n) {
 const AOV_GUESS = { 'LatAm PMC': 274, Brazil: 251, Turkey: 365, Indonesia: 136, UK: 385, CIS: 521, Poland: 200, Italy: 200, USA: 200, Spain: 250, GCC: 250 };
 
 function buildSubsModel(raw, region) {
-  const rows = (raw.subs || []).filter((r) => r.region === region);
+  const rows = (raw.subs || []).filter((r) => r.region === region && r.pay_number !== 1); // Payment 1 = new sale, not our department
   const current = new Map(rows.filter((r) => r.period === 'current').map((r) => [r.pay_number, r]));
   const reference = new Map(rows.filter((r) => r.period === 'reference').map((r) => [r.pay_number, r]));
   const payNumbers = Array.from(new Set([...current.keys(), ...reference.keys()])).sort((a, b) => a - b);
@@ -65,7 +65,7 @@ function buildSubsModel(raw, region) {
     const c = current.get(pn);
     const ref = reference.get(pn);
     const cr = ref && ref.total ? ref.paid / ref.total : null;
-    const aov = ref && ref.aov !== undefined ? ref.aov : null;
+    const aov = ref && ref.aov !== undefined && ref.aov !== null ? Math.round(ref.aov) : null;
     const total = c ? c.total : 0;
     const paid = c ? c.paid : 0;
     const overdue = c ? c.overdue : 0;
@@ -567,18 +567,70 @@ export default function PXOpsConsole() {
         )}
       </div>
 
-      {view === 'subs' && (
-        <div className="px-6 py-5 max-w-6xl mx-auto">
-          <div className="flex gap-1.5 mb-5 overflow-x-auto pb-1">
-            {REGIONS_SUBS.map((r, i) => (
-              <button key={r} onClick={() => setSubsRegionIdx(i)} className={`text-sm px-3 py-1.5 rounded-lg whitespace-nowrap border flex items-center gap-1.5 ${i === subsRegionIdx ? t.pillActive : t.pillInactive}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${i === subsRegionIdx ? 'bg-teal-400 animate-pulse' : t.dot}`} />{r}
+      {view === 'subs' && (() => {
+        const subsIsAll = subsRegionIdx === REGIONS_SUBS.length;
+        const subsAgg = subsIsAll ? REGIONS_SUBS.reduce((acc, r) => {
+          const m = buildSubsModel(raw, r);
+          return {
+            totalScheduled: acc.totalScheduled + m.totalScheduled,
+            totalPaid: acc.totalPaid + m.totalPaid,
+            totalOverdue: acc.totalOverdue + m.totalOverdue,
+            totalPending: acc.totalPending + m.totalPending,
+            revenueCollected: acc.revenueCollected + (m.revenueCollected || 0),
+            projectedPending: acc.projectedPending + (m.projectedPending || 0),
+          };
+        }, { totalScheduled: 0, totalPaid: 0, totalOverdue: 0, totalPending: 0, revenueCollected: 0, projectedPending: 0 }) : null;
+
+        return (
+          <div className="px-6 py-5 max-w-6xl mx-auto">
+            <div className="flex gap-1.5 mb-5 overflow-x-auto pb-1">
+              {REGIONS_SUBS.map((r, i) => (
+                <button key={r} onClick={() => setSubsRegionIdx(i)} className={`text-sm px-3 py-1.5 rounded-lg whitespace-nowrap border flex items-center gap-1.5 ${i === subsRegionIdx ? t.pillActive : t.pillInactive}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${i === subsRegionIdx ? 'bg-teal-400 animate-pulse' : t.dot}`} />{r}
+                </button>
+              ))}
+              <span className={`w-px ${t.track} mx-1`} />
+              <button onClick={() => setSubsRegionIdx(REGIONS_SUBS.length)} className={`text-sm px-3 py-1.5 rounded-lg whitespace-nowrap border flex items-center gap-1.5 font-medium ${subsIsAll ? t.totalActive : t.totalInactive}`}>
+                <Layers size={12} /> ALL REGIONS
               </button>
-            ))}
+            </div>
+
+            {subsIsAll ? (
+              <>
+                <div className="flex gap-3 flex-wrap mb-5">
+                  <Metric t={t} label="Leads this month — all regions" value={subsAgg.totalScheduled.toLocaleString()} sub="Payment 2+ only" />
+                  <Metric t={t} label="Paid" value={subsAgg.totalPaid.toLocaleString()} accent="text-teal-500" sub={subsAgg.totalScheduled ? `${Math.round((subsAgg.totalPaid / subsAgg.totalScheduled) * 100)}% of leads` : ''} />
+                  <Metric t={t} label="Overdue" value={subsAgg.totalOverdue.toLocaleString()} accent="text-amber-500" />
+                  <Metric t={t} label="Revenue collected" value={`$${Math.round(subsAgg.revenueCollected).toLocaleString()}`} accent="text-teal-500" />
+                  <Metric t={t} label="Pending to collect (projected)" value={`$${Math.round(subsAgg.projectedPending).toLocaleString()}`} accent="text-violet-500" />
+                </div>
+                <div className={`${t.panel} border ${t.panelBorder} rounded-xl overflow-x-auto`}>
+                  <table className="w-full text-sm">
+                    <thead><tr className={`text-left text-xs uppercase tracking-wide ${t.muted} border-b ${t.border}`}>
+                      <th className="py-2 px-3">Region</th><th className="py-2 px-3">Leads</th><th className="py-2 px-3">Paid</th><th className="py-2 px-3">Overdue</th><th className="py-2 px-3">Revenue collected</th><th className="py-2 px-3">Pending (projected)</th>
+                    </tr></thead>
+                    <tbody>{REGIONS_SUBS.map((r, i) => {
+                      const m = buildSubsModel(raw, r);
+                      return (
+                        <tr key={r} className={`border-b ${t.border} ${t.rowHover} cursor-pointer`} onClick={() => setSubsRegionIdx(i)}>
+                          <td className={`py-2 px-3 ${t.strong}`}>{r}</td>
+                          <td className={`py-2 px-3 font-mono ${t.mutedStrong}`}>{m.totalScheduled.toLocaleString()}</td>
+                          <td className="py-2 px-3 font-mono text-teal-500">{m.totalPaid}</td>
+                          <td className="py-2 px-3 font-mono text-amber-500">{m.totalOverdue}</td>
+                          <td className="py-2 px-3 font-mono text-teal-500">{m.hasRevenueData ? `$${Math.round(m.revenueCollected).toLocaleString()}` : '—'}</td>
+                          <td className="py-2 px-3 font-mono text-violet-500">{m.hasCrBenchmark ? `$${Math.round(m.projectedPending).toLocaleString()}` : 'n/a'}</td>
+                        </tr>
+                      );
+                    })}</tbody>
+                  </table>
+                </div>
+              </>
+            ) : (
+              <SubscriptionsPanel t={t} raw={raw} region={REGIONS_SUBS[subsRegionIdx]} />
+            )}
           </div>
-          <SubscriptionsPanel t={t} raw={raw} region={REGIONS_SUBS[subsRegionIdx]} />
-        </div>
-      )}
+        );
+      })()}
 
       {view === 'total' && (
         <div className="px-6 py-16 max-w-6xl mx-auto text-center">
