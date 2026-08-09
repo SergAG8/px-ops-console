@@ -9,6 +9,7 @@ CARDS = {
     "ism_tasks": os.environ["CARD_ISM_TASKS"],
     "ism_touches": os.environ["CARD_ISM_TOUCHES"],
     "ism_revenue": os.environ["CARD_ISM_REVENUE"],
+    "subs_installments": os.environ["CARD_SUBS_INSTALLMENTS"],
 }
 
 os.makedirs("public/data", exist_ok=True)
