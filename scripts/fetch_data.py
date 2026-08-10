@@ -51,41 +51,27 @@ for name, card_id in CARDS.items():
     rows = fetch(card_id)
 
     if name == "ism_touches":
-        # Resolve every row's manager name to the canonical roster name when
-        # possible (handles reversed word order, missing role prefix, etc.)
-        # before aggregating — otherwise the same real person gets split
-        # across several different-looking "manager" keys.
+        # Metabase already pre-aggregated by region+manager(raw)+day. We still
+        # need to resolve each raw manager name to its canonical roster form
+        # (handles reversed word order, missing role prefix, etc.) and merge
+        # rows that turn out to be the same real person under different names.
+        merged = defaultdict(lambda: {"calls": 0, "successful_calls": 0, "talk_seconds": 0, "messages": 0})
         resolved = 0
         for r in rows:
             raw = (r.get("manager") or "").strip()
-            if not raw or raw == "Bloomreach":
+            if not raw:
                 continue
             canonical = sig_to_canonical.get(normalize_name(raw))
             if canonical:
-                r["manager"] = canonical
                 resolved += 1
-        print(f"  -> resolved {resolved}/{len(rows)} touch rows to a canonical roster name")
-
-        # ~400k+ raw rows is too heavy to ship to the browser — the dashboard only
-        # ever shows totals (calls, successful, talk time, messages) per manager
-        # per day, never a single call/message row. Summing here in Python gives
-        # the exact same numbers on screen, at a fraction of the file size.
-        agg = defaultdict(lambda: {"calls": 0, "successful_calls": 0, "talk_seconds": 0, "messages": 0})
-        for r in rows:
-            manager = (r.get("manager") or "").strip()
-            if not manager or manager == "Bloomreach":
-                continue
-            touched_at = str(r.get("touched_at") or "")
-            day = touched_at[:10]
-            key = (r.get("region") or "", manager, day)
-            if r.get("touch_type") == "call":
-                agg[key]["calls"] += 1
-                if r.get("is_call_successfully"):
-                    agg[key]["successful_calls"] += 1
-                agg[key]["talk_seconds"] += r.get("talk_seconds") or 0
-            elif r.get("touch_type") == "message":
-                agg[key]["messages"] += 1
-        out = [{"region": k[0], "manager": k[1], "day": k[2], **v} for k, v in agg.items()]
+            manager = canonical or raw
+            key = (r.get("region") or "", manager, r.get("day") or "")
+            merged[key]["calls"] += r.get("calls") or 0
+            merged[key]["successful_calls"] += r.get("successful_calls") or 0
+            merged[key]["talk_seconds"] += r.get("talk_seconds") or 0
+            merged[key]["messages"] += r.get("messages") or 0
+        print(f"  -> resolved {resolved}/{len(rows)} pre-aggregated rows to a canonical roster name")
+        out = [{"region": k[0], "manager": k[1], "day": k[2], **v} for k, v in merged.items()]
     else:
         out = rows
 
